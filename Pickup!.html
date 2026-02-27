@@ -1,0 +1,2770 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pick Up! — Sali a Bordo</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Righteous&family=Nunito:wght@400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sky:       #e8f4fd;
+    --sky-mid:   #bde0f7;
+    --sky-deep:  #5bb8f5;
+    --ocean:     #1a7fbf;
+    --ocean-dark:#135d8c;
+    --coral:     #ff6b4a;
+    --coral-dim: #e55030;
+    --mango:     #ffb830;
+    --mango-dim: #e09f20;
+    --mint:      #3dcb8e;
+    --mint-dim:  #2aad74;
+    --sand:      #fff8ed;
+    --white:     #ffffff;
+    --ink:       #1a2332;
+    --ink-mid:   #2d3e55;
+    --ink-soft:  #4a6278;
+    --ink-faint: #8aa0b2;
+    --border:    #d4e6f0;
+    --border-mid:#b8d5e8;
+    --card-bg:   #ffffff;
+    --page-bg:   #f0f8ff;
+    --shadow-sm: 0 2px 8px rgba(26,127,191,0.08);
+    --shadow-md: 0 4px 24px rgba(26,127,191,0.13);
+    --shadow-lg: 0 12px 48px rgba(26,127,191,0.18);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--page-bg);
+    color: var(--ink);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: var(--sky); }
+  ::-webkit-scrollbar-thumb { background: var(--sky-deep); border-radius: 3px; }
+
+  /* WAVE DECORATION */
+  .wave-divider {
+    width: 100%;
+    overflow: hidden;
+    line-height: 0;
+    margin-bottom: -2px;
+  }
+  .wave-divider svg { display: block; width: 100%; }
+
+  /* TYPOGRAPHY */
+  .righteous { font-family: 'Righteous', cursive; }
+  .mono { font-family: 'DM Mono', monospace; }
+
+  /* NAV */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 40px;
+    height: 68px;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(20px);
+    border-bottom: 1.5px solid var(--border);
+    box-shadow: 0 2px 16px rgba(26,127,191,0.07);
+  }
+
+  .nav-logo {
+    font-family: 'Righteous', cursive;
+    font-size: 26px;
+    color: var(--ocean);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    letter-spacing: 0.5px;
+  }
+
+  .nav-logo .excl { color: var(--coral); }
+  .nav-logo .dot { 
+    width: 10px; height: 10px; background: var(--mango);
+    border-radius: 50%; display: inline-block;
+    animation: bounceDot 1.8s ease-in-out infinite;
+  }
+  @keyframes bounceDot {
+    0%,100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+  }
+
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .nav-link {
+    padding: 8px 16px;
+    border-radius: 50px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--ink-soft);
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.2px;
+  }
+  .nav-link:hover { background: var(--sky); color: var(--ocean); }
+  .nav-link.active { background: var(--sky); color: var(--ocean); }
+
+  .nav-actions { display: flex; gap: 10px; align-items: center; }
+
+  /* BUTTONS */
+  .btn {
+    padding: 10px 22px;
+    border-radius: 50px;
+    font-family: 'Nunito', sans-serif;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    white-space: nowrap;
+    letter-spacing: 0.2px;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--coral), #ff8060);
+    color: white;
+    box-shadow: 0 4px 16px rgba(255,107,74,0.35);
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(255,107,74,0.45); }
+
+  .btn-ocean {
+    background: linear-gradient(135deg, var(--ocean), var(--sky-deep));
+    color: white;
+    box-shadow: 0 4px 16px rgba(26,127,191,0.3);
+  }
+  .btn-ocean:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(26,127,191,0.4); }
+
+  .btn-mango {
+    background: linear-gradient(135deg, var(--mango), #ffc850);
+    color: var(--ink);
+    box-shadow: 0 4px 16px rgba(255,184,48,0.3);
+  }
+  .btn-mango:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(255,184,48,0.45); }
+
+  .btn-outline {
+    background: white;
+    color: var(--ocean);
+    border: 2px solid var(--sky-deep);
+  }
+  .btn-outline:hover { background: var(--sky); border-color: var(--ocean); }
+
+  .btn-ghost {
+    background: var(--sky);
+    color: var(--ocean);
+  }
+  .btn-ghost:hover { background: var(--sky-mid); }
+
+  .btn-white {
+    background: white;
+    color: var(--coral);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  }
+  .btn-white:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.18); }
+
+  .btn-sm { padding: 7px 16px; font-size: 13px; }
+  .btn-lg { padding: 14px 32px; font-size: 16px; }
+  .btn-full { width: 100%; justify-content: center; }
+
+  /* HERO */
+  .hero {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: linear-gradient(160deg, #1a7fbf 0%, #2196d3 35%, #5bb8f5 65%, #8fd4f8 100%);
+    padding-top: 68px;
+  }
+
+  /* Floating clouds */
+  .cloud {
+    position: absolute;
+    background: rgba(255,255,255,0.25);
+    border-radius: 50px;
+    filter: blur(1px);
+  }
+  .cloud::before, .cloud::after {
+    content:'';
+    position:absolute;
+    background: rgba(255,255,255,0.25);
+    border-radius: 50%;
+  }
+  .c1 { width:120px;height:40px;top:15%;left:8%;animation:cloudFloat 18s linear infinite; }
+  .c1::before{width:50px;height:50px;top:-20px;left:20px;}
+  .c1::after{width:35px;height:35px;top:-15px;left:55px;}
+  .c2 { width:80px;height:28px;top:25%;right:12%;animation:cloudFloat 22s linear infinite reverse; opacity:0.7; }
+  .c2::before{width:36px;height:36px;top:-16px;left:12px;}
+  .c2::after{width:24px;height:24px;top:-10px;left:40px;}
+  .c3 { width:160px;height:48px;top:60%;left:5%;animation:cloudFloat 26s linear infinite; opacity:0.5; }
+  .c3::before{width:64px;height:64px;top:-26px;left:28px;}
+  .c3::after{width:48px;height:48px;top:-20px;left:78px;}
+
+  @keyframes cloudFloat {
+    0%   { transform: translateX(-40px); }
+    50%  { transform: translateX(40px); }
+    100% { transform: translateX(-40px); }
+  }
+
+  /* Road at bottom of hero */
+  .hero-road-wrap {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 180px;
+  }
+
+  .truck-wrap {
+    position: absolute;
+    bottom: 60px;
+    animation: truckDrive 18s linear infinite;
+    font-size: 56px;
+    filter: drop-shadow(0 8px 20px rgba(0,0,0,0.2));
+    z-index: 2;
+  }
+  @keyframes truckDrive {
+    from { left: -90px; }
+    to { left: 110%; }
+  }
+
+  /* Sun decoration */
+  .sun {
+    position: absolute;
+    top: 60px;
+    right: 80px;
+    width: 80px;
+    height: 80px;
+    background: var(--mango);
+    border-radius: 50%;
+    box-shadow: 0 0 0 16px rgba(255,184,48,0.2), 0 0 0 32px rgba(255,184,48,0.1);
+    animation: sunPulse 4s ease-in-out infinite;
+  }
+  @keyframes sunPulse {
+    0%,100% { box-shadow: 0 0 0 16px rgba(255,184,48,0.2), 0 0 0 32px rgba(255,184,48,0.1); }
+    50% { box-shadow: 0 0 0 24px rgba(255,184,48,0.25), 0 0 0 48px rgba(255,184,48,0.08); }
+  }
+
+  .hero-content {
+    position: relative;
+    z-index: 3;
+    text-align: center;
+    max-width: 800px;
+    padding: 0 24px 80px;
+  }
+
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 20px;
+    background: rgba(255,255,255,0.2);
+    backdrop-filter: blur(10px);
+    border: 1.5px solid rgba(255,255,255,0.4);
+    border-radius: 50px;
+    font-size: 13px;
+    font-weight: 700;
+    color: white;
+    margin-bottom: 28px;
+    letter-spacing: 0.5px;
+  }
+
+  .hero-title {
+    font-family: 'Righteous', cursive;
+    font-size: clamp(56px, 11vw, 130px);
+    color: white;
+    line-height: 0.95;
+    text-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    margin-bottom: 8px;
+  }
+
+  .hero-title .pickup-excl { color: var(--mango); }
+
+  .hero-sub-title {
+    font-family: 'Righteous', cursive;
+    font-size: clamp(20px, 4vw, 42px);
+    color: rgba(255,255,255,0.85);
+    margin-bottom: 24px;
+    letter-spacing: 1px;
+  }
+
+  .hero-desc {
+    font-size: 17px;
+    color: rgba(255,255,255,0.88);
+    max-width: 500px;
+    margin: 0 auto 40px;
+    line-height: 1.75;
+    font-weight: 500;
+  }
+
+  .hero-ctas {
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 48px;
+  }
+
+  .hero-stats {
+    display: flex;
+    gap: 40px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .hero-stat {
+    text-align: center;
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(10px);
+    border: 1.5px solid rgba(255,255,255,0.3);
+    border-radius: 16px;
+    padding: 16px 28px;
+  }
+
+  .hero-stat-num {
+    font-family: 'Righteous', cursive;
+    font-size: 36px;
+    color: white;
+    line-height: 1;
+  }
+
+  .hero-stat-label {
+    font-size: 12px;
+    color: rgba(255,255,255,0.75);
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin-top: 4px;
+  }
+
+  /* SECTION */
+  .section {
+    padding: 80px 40px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .section-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: var(--sky);
+    color: var(--ocean);
+    border-radius: 50px;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    margin-bottom: 14px;
+    text-transform: uppercase;
+  }
+
+  .section-title {
+    font-family: 'Righteous', cursive;
+    font-size: clamp(32px, 4vw, 56px);
+    color: var(--ink);
+    line-height: 1.1;
+    margin-bottom: 48px;
+  }
+
+  .section-title .accent { color: var(--coral); }
+
+  /* CARDS */
+  .card {
+    background: var(--card-bg);
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+    transition: transform 0.25s, box-shadow 0.25s;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .card-body { padding: 24px; }
+
+  /* TRIP CARD */
+  .trip-card { cursor: pointer; }
+
+  .trip-top {
+    background: linear-gradient(135deg, var(--sky) 0%, #ddf0ff 100%);
+    padding: 20px 24px 16px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .trip-top::after {
+    content: '🚛';
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 40px;
+    opacity: 0.18;
+  }
+
+  .route-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .city {
+    font-family: 'Righteous', cursive;
+    font-size: 22px;
+    color: var(--ink);
+  }
+
+  .route-line {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .route-dot {
+    width: 8px; height: 8px;
+    background: var(--coral);
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .route-dash {
+    flex: 1;
+    height: 2px;
+    background: repeating-linear-gradient(to right, var(--sky-deep) 0px, var(--sky-deep) 6px, transparent 6px, transparent 12px);
+  }
+
+  .route-arrow-icon {
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .trip-price-tag {
+    position: absolute;
+    top: 0; right: 60px;
+    background: var(--coral);
+    color: white;
+    font-family: 'Righteous', cursive;
+    font-size: 22px;
+    padding: 6px 16px 8px;
+    border-radius: 0 0 14px 14px;
+    box-shadow: 0 4px 12px rgba(255,107,74,0.35);
+  }
+
+  .trip-price-small { font-size: 11px; font-family:'Nunito',sans-serif; font-weight:700; opacity:0.85; }
+
+  .trip-body { padding: 16px 24px 20px; }
+
+  .trip-meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .meta-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: var(--sky);
+    color: var(--ink-soft);
+    padding: 5px 12px;
+    border-radius: 50px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .driver-strip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--sand);
+    border-radius: 12px;
+    border: 1px solid #ffe8cc;
+  }
+
+  .seats-bar { height: 5px; background: var(--sky-mid); border-radius: 3px; margin-top: 14px; overflow: hidden; }
+  .seats-fill { height: 100%; border-radius: 3px; transition: width 0.5s; }
+
+  /* GRID */
+  .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 20px; }
+
+  /* FORMS */
+  .form-group { margin-bottom: 18px; }
+
+  .form-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 7px;
+  }
+
+  .form-input, .form-select, .form-textarea {
+    width: 100%;
+    padding: 11px 16px;
+    background: var(--sky);
+    border: 1.5px solid var(--border-mid);
+    border-radius: 12px;
+    color: var(--ink);
+    font-family: 'Nunito', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+    outline: none;
+    border-color: var(--sky-deep);
+    background: white;
+    box-shadow: 0 0 0 3px rgba(91,184,245,0.18);
+  }
+
+  .form-input::placeholder { color: var(--ink-faint); font-weight: 500; }
+  .form-select option { background: white; }
+  .form-textarea { resize: vertical; min-height: 90px; }
+  .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(26,35,50,0.55);
+    backdrop-filter: blur(10px);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    animation: fadeIn 0.2s ease;
+  }
+
+  @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+  @keyframes slideUp { from { transform:translateY(24px); opacity:0; } to { transform:translateY(0); opacity:1; } }
+
+  .modal {
+    background: white;
+    border: 1.5px solid var(--border);
+    border-radius: 24px;
+    width: 100%;
+    max-width: 500px;
+    max-height: 92vh;
+    overflow-y: auto;
+    animation: slideUp 0.28s cubic-bezier(.34,1.56,.64,1);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .modal-lg { max-width: 740px; }
+  .modal-xl { max-width: 920px; }
+
+  .modal-header {
+    padding: 24px 28px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .modal-title {
+    font-family: 'Righteous', cursive;
+    font-size: 26px;
+    color: var(--ink);
+    letter-spacing: 0.5px;
+  }
+
+  .modal-close {
+    background: var(--sky);
+    border: none;
+    color: var(--ink-soft);
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+  .modal-close:hover { background: var(--sky-mid); color: var(--ink); }
+
+  .modal-body { padding: 20px 28px 28px; }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    background: var(--sky);
+    border-radius: 50px;
+    padding: 4px;
+    margin-bottom: 24px;
+    gap: 0;
+  }
+
+  .tab {
+    flex: 1;
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+    color: var(--ink-soft);
+    border-radius: 50px;
+    text-align: center;
+    transition: all 0.2s;
+  }
+  .tab.active { background: white; color: var(--ocean); box-shadow: var(--shadow-sm); }
+
+  /* BADGE */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 50px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+  }
+
+  .badge-coral { background: rgba(255,107,74,0.12); color: var(--coral); }
+  .badge-green { background: rgba(61,203,142,0.15); color: var(--mint-dim); }
+  .badge-ocean { background: rgba(26,127,191,0.1); color: var(--ocean); }
+  .badge-mango { background: rgba(255,184,48,0.15); color: #b07a00; }
+  .badge-grey { background: var(--sky); color: var(--ink-soft); }
+
+  /* DASHBOARD */
+  .dashboard-layout {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    min-height: 100vh;
+    padding-top: 68px;
+  }
+
+  .sidebar {
+    background: white;
+    border-right: 1.5px solid var(--border);
+    padding: 28px 12px;
+    position: sticky;
+    top: 68px;
+    height: calc(100vh - 68px);
+    overflow-y: auto;
+    box-shadow: 2px 0 16px rgba(26,127,191,0.05);
+  }
+
+  .sidebar-label {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    padding: 0 12px;
+    margin: 16px 0 8px;
+  }
+
+  .sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 14px;
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--ink-soft);
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-bottom: 2px;
+  }
+  .sidebar-item:hover { background: var(--sky); color: var(--ocean); }
+  .sidebar-item.active { background: var(--sky); color: var(--ocean); }
+  .sidebar-item.active .s-icon { background: var(--ocean); color: white; }
+
+  .s-icon {
+    width: 34px; height: 34px;
+    border-radius: 10px;
+    background: var(--sky-mid);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+    transition: all 0.15s;
+  }
+
+  .main-content { padding: 40px; background: var(--page-bg); overflow: auto; }
+
+  /* STATS ROW */
+  .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px; margin-bottom: 36px; }
+
+  .stat-card {
+    background: white;
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    padding: 20px 22px;
+    box-shadow: var(--shadow-sm);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+  }
+  .stat-coral::before { background: var(--coral); }
+  .stat-ocean::before { background: var(--ocean); }
+  .stat-mango::before { background: var(--mango); }
+  .stat-mint::before { background: var(--mint); }
+
+  .stat-card-num { font-family:'Righteous',cursive; font-size: 44px; line-height: 1; margin-bottom: 4px; }
+  .stat-card-label { font-size: 12px; color: var(--ink-faint); font-weight: 700; letter-spacing: 0.3px; }
+
+  /* TABLE */
+  .table-wrap { overflow-x: auto; border-radius: 16px; border: 1.5px solid var(--border); background: white; box-shadow: var(--shadow-sm); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  thead { background: var(--sky); }
+  th { padding: 13px 16px; text-align: left; font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--ink-soft); }
+  td { padding: 14px 16px; border-bottom: 1px solid var(--sky); color: var(--ink-soft); font-weight: 600; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(232,244,253,0.5); }
+
+  /* MAP */
+  .map-container {
+    background: linear-gradient(160deg, #e8f7ff, #d0efff);
+    border-radius: 16px;
+    border: 1.5px solid var(--border);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 280px;
+  }
+
+  .map-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(26,127,191,0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(26,127,191,0.06) 1px, transparent 1px);
+    background-size: 36px 36px;
+  }
+
+  /* SEARCH BAR */
+  .search-bar {
+    background: white;
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    padding: 20px 24px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    margin-bottom: 32px;
+    box-shadow: var(--shadow-md);
+  }
+
+  .search-field { flex: 1; min-width: 150px; }
+  .search-field label { font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--ink-soft); display: block; margin-bottom: 6px; }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    background: white;
+    border: 1.5px solid var(--border);
+    border-left: 4px solid var(--mint);
+    padding: 14px 20px;
+    border-radius: 14px;
+    z-index: 9000;
+    font-size: 14px;
+    font-weight: 700;
+    animation: slideUp 0.3s ease;
+    max-width: 320px;
+    box-shadow: var(--shadow-md);
+    color: var(--ink);
+  }
+  .toast.error { border-left-color: var(--coral); }
+
+  /* AVATAR */
+  .avatar {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--sky-deep), var(--ocean));
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 13px; color: white;
+    flex-shrink: 0;
+  }
+  .avatar-lg { width: 64px; height: 64px; font-size: 22px; }
+
+  .avatar-driver { background: linear-gradient(135deg, var(--coral), #ff8060); }
+
+  /* DIVIDER */
+  .divider { height: 1.5px; background: var(--sky); margin: 16px 0; border-radius: 2px; }
+
+  /* PAGE HEADER */
+  .page-header { margin-bottom: 32px; }
+  .page-title { font-family:'Righteous',cursive; font-size: 40px; line-height: 1; color: var(--ink); }
+  .page-title .accent { color: var(--coral); }
+  .page-sub { font-size: 14px; color: var(--ink-faint); margin-top: 6px; font-weight: 600; }
+
+  /* ALERTS */
+  .alert { padding: 13px 16px; border-radius: 12px; font-size: 13px; margin-bottom: 14px; display:flex; align-items:flex-start; gap:9px; font-weight:600; }
+  .alert-success { background: rgba(61,203,142,0.1); border:1.5px solid rgba(61,203,142,0.25); color: var(--mint-dim); }
+  .alert-info { background: var(--sky); border:1.5px solid var(--border-mid); color: var(--ocean); }
+  .alert-warn { background: rgba(255,184,48,0.1); border:1.5px solid rgba(255,184,48,0.3); color: #a07600; }
+
+  /* STEPS */
+  .steps { display:flex; align-items:center; margin-bottom:28px; }
+  .step { display:flex; align-items:center; gap:8px; }
+  .step-circle {
+    width:30px; height:30px; border-radius:50%;
+    border: 2px solid var(--border-mid);
+    display:flex; align-items:center; justify-content:center;
+    font-size:12px; font-weight:800; color: var(--ink-faint);
+    flex-shrink:0; transition: all 0.3s;
+  }
+  .step.done .step-circle { background: var(--mint); border-color: var(--mint); color: white; }
+  .step.active .step-circle { border-color: var(--coral); color: var(--coral); }
+  .step-label { font-size:12px; font-weight:700; color: var(--ink-faint); }
+  .step.active .step-label, .step.done .step-label { color: var(--ink); }
+  .step-line { flex:1; height:2px; background: var(--sky-mid); margin:0 10px; border-radius:2px; }
+  .step-line.done { background: var(--mint); }
+
+  /* DETAIL */
+  .detail-hero {
+    background: linear-gradient(135deg, var(--sky) 0%, #d6eefa 100%);
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    padding: 32px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .detail-hero::after {
+    content: '🗺️';
+    position: absolute;
+    right: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 80px;
+    opacity: 0.1;
+  }
+
+  .detail-city { font-family:'Righteous',cursive; font-size: 52px; line-height: 1; color: var(--ink); }
+  .detail-arrow { font-size: 28px; color: var(--coral); margin: 0 16px; }
+
+  .driver-pref-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 14px;
+    border-radius: 50px;
+    font-size: 12px;
+    font-weight: 700;
+    border: 1.5px solid;
+  }
+  .pref-yes { background: rgba(61,203,142,0.1); border-color: rgba(61,203,142,0.3); color: var(--mint-dim); }
+  .pref-no  { background: rgba(255,107,74,0.08); border-color: rgba(255,107,74,0.25); color: var(--coral); }
+  .pref-neutral { background: var(--sky); border-color: var(--border-mid); color: var(--ink-soft); }
+
+  /* PREFERENCE SECTION */
+  .prefs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+    margin: 16px 0;
+  }
+
+  .pref-card {
+    background: var(--sky);
+    border: 1.5px solid var(--border-mid);
+    border-radius: 14px;
+    padding: 14px 12px;
+    text-align: center;
+    transition: all 0.2s;
+  }
+
+  .pref-card.selected {
+    background: rgba(61,203,142,0.1);
+    border-color: var(--mint);
+    box-shadow: 0 0 0 3px rgba(61,203,142,0.12);
+  }
+
+  .pref-card.refused {
+    background: rgba(255,107,74,0.06);
+    border-color: var(--coral);
+    box-shadow: 0 0 0 3px rgba(255,107,74,0.08);
+  }
+
+  .pref-emoji { font-size: 26px; margin-bottom: 6px; display: block; }
+  .pref-label { font-size: 11px; font-weight: 800; color: var(--ink-soft); }
+
+  /* EMPTY */
+  .empty-state { text-align:center; padding:60px 24px; color: var(--ink-faint); }
+  .empty-icon { font-size:56px; margin-bottom:14px; display:block; }
+  .empty-title { font-family:'Righteous',cursive; font-size:26px; color: var(--ink); margin-bottom:8px; }
+  .empty-desc { font-size:14px; line-height:1.6; font-weight:600; }
+
+  /* COMPANY BADGE */
+  .company-badge {
+    display:inline-flex; align-items:center; gap:5px;
+    padding:4px 10px;
+    background: var(--sky);
+    border-radius:50px;
+    font-size:12px; font-weight:700;
+    color: var(--ink-soft);
+  }
+
+  /* SPINNER */
+  .spinner { width:18px;height:18px;border:2.5px solid rgba(255,255,255,0.35);border-top-color:white;border-radius:50%;animation:spin .8s linear infinite;display:inline-block; }
+  .spinner-dark { border:2.5px solid rgba(26,127,191,0.2);border-top-color:var(--ocean); }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  /* FEATURE CARDS */
+  .feature-card {
+    background: white;
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    padding: 28px 24px;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.25s;
+  }
+  .feature-card:hover { transform:translateY(-4px); box-shadow: var(--shadow-lg); }
+  .feature-icon-wrap {
+    width:56px;height:56px;
+    border-radius:16px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:26px;
+    margin-bottom:16px;
+  }
+
+  /* RESPONSIVE */
+  @media (max-width:768px) {
+    nav { padding:0 20px; }
+    .nav-links { display:none; }
+    .section { padding:60px 20px; }
+    .dashboard-layout { grid-template-columns:1fr; }
+    .sidebar { display:none; }
+    .main-content { padding:24px 16px; }
+    .input-row { grid-template-columns:1fr; }
+    .hero-stats { gap:12px; }
+    .hero-stat { padding:12px 18px; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+
+const { useState, useEffect } = React;
+
+// ─── DATA ─────────────────────────────────────────────────────────────────────
+
+const CITIES = ["Milano","Roma","Napoli","Torino","Bologna","Firenze","Venezia","Bari","Palermo","Genova","Trieste","Verona","Brescia","Padova","Modena","Reggio Calabria","Catania","Messina","Perugia","Ancona"];
+
+// Driver preferences definition
+const DRIVER_PREFS_DEF = [
+  { key:'music',    emoji:'🎵', label:'Musica OK',       desc:'L\'autista ascolta musica durante il viaggio' },
+  { key:'talking',  emoji:'💬', label:'Chiacchiere',     desc:'Ama conversare con i passeggeri' },
+  { key:'smoking',  emoji:'🚬', label:'Non fumatore',    desc:'Vietato fumare sul camion' },
+  { key:'pets',     emoji:'🐾', label:'Animali OK',      desc:'Accetta piccoli animali domestici' },
+  { key:'food',     emoji:'🍕', label:'Cibo Consentito', desc:'Puoi mangiare a bordo' },
+  { key:'stops',    emoji:'⛽', label:'Soste Frequenti', desc:'Pause regolari ogni 2h' },
+  { key:'ac',       emoji:'❄️',  label:'Aria Condizionata',desc:'Camion con AC funzionante' },
+  { key:'quiet',    emoji:'🤫', label:'Viaggio Silenzioso',desc:'Preferisce silenzio e relax' },
+];
+
+const MOCK_COMPANIES = [
+  { id:1, name:"LogiTrans Italia", city:"Milano", trucks:8, drivers:6, logo:"🏢" },
+  { id:2, name:"SpeedCargo Sud", city:"Napoli", trucks:12, drivers:10, logo:"🏭" },
+  { id:3, name:"NordTrasporti", city:"Torino", trucks:5, drivers:4, logo:"🏗️" },
+];
+
+const MOCK_DRIVERS = [
+  {
+    id:1, name:"Marco Ferretti", email:"marco@logitrans.it", password:"pass123",
+    companyId:1, truck:"Volvo FH 2022", plate:"MI 482 KT", experience:12, rating:4.9, avatar:"MF",
+    bio:"Autista professionista dal 2012. Appassionato di musica e buona cucina. Ogni viaggio è un'avventura!",
+    prefs:{ music:true, talking:true, smoking:false, pets:true, food:true, stops:true, ac:true, quiet:false }
+  },
+  {
+    id:2, name:"Giuseppe Rana", email:"giuseppe@speedcargo.it", password:"pass123",
+    companyId:2, truck:"Scania R450", plate:"NA 219 PL", experience:8, rating:4.7, avatar:"GR",
+    bio:"Amo le lunghe tratte, conosco ogni autogrill d'Italia. Viaggio tranquillo e sicuro garantito.",
+    prefs:{ music:true, talking:false, smoking:false, pets:false, food:false, stops:true, ac:true, quiet:true }
+  },
+  {
+    id:3, name:"Luca Bernini", email:"luca@nordtrasporti.eu", password:"pass123",
+    companyId:3, truck:"Mercedes Actros", plate:"TO 773 AZ", experience:15, rating:4.8, avatar:"LB",
+    bio:"15 anni sulla strada, 500.000 km percorsi. Puntuale, cordiale, sempre disponibile.",
+    prefs:{ music:false, talking:true, smoking:false, pets:true, food:true, stops:false, ac:true, quiet:false }
+  },
+];
+
+const MOCK_USERS = [
+  { id:1, name:"Sofia Marino", email:"sofia@email.it", password:"pass123", avatar:"SM" },
+  { id:2, name:"Alessandro Conti", email:"alex@email.it", password:"pass123", avatar:"AC" },
+];
+
+const mkDate = (days, h=9) => {
+  const d = new Date(); d.setDate(d.getDate()+days); d.setHours(h,0,0,0); return d;
+};
+
+const MOCK_TRIPS = [
+  { id:1, driverId:1, from:"Milano", to:"Roma", departure:mkDate(1,7), arrival:mkDate(1,15), seats:4, seatsLeft:3, price:35, distance:"570 km", notes:"Sosta a Bologna. Camion climatizzato e confortevole.", status:"active" },
+  { id:2, driverId:2, from:"Napoli", to:"Milano", departure:mkDate(2,6), arrival:mkDate(2,17), seats:3, seatsLeft:1, price:42, distance:"760 km", notes:"Partenza puntuale. Ottima compagnia garantita.", status:"active" },
+  { id:3, driverId:3, from:"Torino", to:"Bari", departure:mkDate(3,8), arrival:mkDate(3,20), seats:2, seatsLeft:2, price:55, distance:"880 km", notes:"Autostrada A21 e A14. Viaggio diretto.", status:"active" },
+  { id:4, driverId:1, from:"Roma", to:"Firenze", departure:mkDate(5,9), arrival:mkDate(5,13), seats:4, seatsLeft:4, price:25, distance:"280 km", notes:"Ideale per il weekend. Partenza puntuale.", status:"active" },
+  { id:5, driverId:2, from:"Bologna", to:"Venezia", departure:mkDate(7,10), arrival:mkDate(7,12), seats:3, seatsLeft:0, price:18, distance:"140 km", notes:"Viaggio breve e comodo.", status:"full" },
+  { id:6, driverId:3, from:"Genova", to:"Palermo", departure:mkDate(4,6), arrival:mkDate(5,10), seats:2, seatsLeft:1, price:65, distance:"1100 km", notes:"Incluso traghetto notturno! Esperienza unica.", status:"active" },
+];
+
+const MOCK_BOOKINGS = [
+  { id:1, userId:1, tripId:1, status:"confirmed", seats:1, total:35, createdAt:new Date(Date.now()-86400000*2) },
+  { id:2, userId:1, tripId:3, status:"confirmed", seats:1, total:55, createdAt:new Date(Date.now()-86400000*5) },
+];
+
+// ─── UTILS ────────────────────────────────────────────────────────────────────
+const fmtDate = d => d ? new Date(d).toLocaleDateString('it-IT',{weekday:'short',day:'2-digit',month:'short'}) : '';
+const fmtTime = d => d ? new Date(d).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}) : '';
+const getDriver = id => MOCK_DRIVERS.find(d=>d.id===id);
+const getCompany = id => MOCK_COMPANIES.find(c=>c.id===id);
+const getTrip = id => MOCK_TRIPS.find(t=>t.id===id);
+
+// Calcola durata approssimativa tra due date e restituisce stringa leggibile
+const calcDuration = (dep, arr) => {
+  if (!dep || !arr) return null;
+  const ms = new Date(arr) - new Date(dep);
+  if (ms <= 0) return null;
+  const totalMins = Math.round(ms / 60000);
+  const h = Math.floor(totalMins / 60);
+  const m = totalMins % 60;
+  if (h === 0) return `${m} min`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}min`;
+};
+
+// Calcola durata da distanza (fallback se le date non sono attendibili)
+const calcDurationFromKm = (distanceStr) => {
+  if (!distanceStr) return null;
+  const km = parseInt(distanceStr.replace(/[^0-9]/g,''));
+  if (!km) return null;
+  // stima: velocità media camion ~80km/h su autostrada, +20% per soste/traffico
+  const h = km / 80;
+  const hRounded = Math.round(h * 2) / 2; // arrotonda a mezz'ora
+  const hFloor = Math.floor(hRounded);
+  const mins = (hRounded - hFloor) * 60;
+  if (mins === 0) return `~${hFloor}h`;
+  return `~${hFloor}h ${mins}min`;
+};
+
+// ─── COMPONENTS ───────────────────────────────────────────────────────────────
+
+function Toast({ msg, type='success', onClose }) {
+  useEffect(() => { const t=setTimeout(onClose,3500); return ()=>clearTimeout(t); }, []);
+  return (
+    <div className={`toast ${type}`}>
+      {type==='success'?'🎉':'😬'} {msg}
+    </div>
+  );
+}
+
+function MapView({ from, to, height=280 }) {
+  return (
+    <div className="map-container" style={{height}}>
+      <div className="map-grid"></div>
+      <svg width="90%" viewBox="0 0 560 160" style={{position:'relative',zIndex:1}}>
+        <defs>
+          <linearGradient id="rg" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#ff6b4a"/>
+            <stop offset="100%" stopColor="#5bb8f5"/>
+          </linearGradient>
+          <marker id="arr" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+            <polygon points="0 0,10 3.5,0 7" fill="#5bb8f5"/>
+          </marker>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="2" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        {/* Road */}
+        <path d="M70 80 Q180 45 280 80 Q380 115 490 80" fill="none" stroke="rgba(26,127,191,0.12)" strokeWidth="10" strokeLinecap="round"/>
+        {/* Route */}
+        <path d="M70 80 Q180 45 280 80 Q380 115 490 80" fill="none" stroke="url(#rg)" strokeWidth="2.5" strokeDasharray="8,5" markerEnd="url(#arr)" filter="url(#glow)"/>
+        {/* Start */}
+        <circle cx="70" cy="80" r="12" fill="var(--coral)" opacity="0.2"/>
+        <circle cx="70" cy="80" r="7" fill="var(--coral)"/>
+        <circle cx="70" cy="80" r="3" fill="white"/>
+        {/* End */}
+        <circle cx="490" cy="80" r="12" fill="var(--ocean)" opacity="0.2"/>
+        <circle cx="490" cy="80" r="7" fill="var(--ocean)"/>
+        <circle cx="490" cy="80" r="3" fill="white"/>
+        {/* Truck */}
+        <text x="270" y="62" textAnchor="middle" fontSize="22">🚛</text>
+        {/* Labels */}
+        <text x="70" y="105" textAnchor="middle" fill="var(--ink)" fontSize="12" fontFamily="Righteous, cursive">{from}</text>
+        <text x="490" y="105" textAnchor="middle" fill="var(--ink)" fontSize="12" fontFamily="Righteous, cursive">{to}</text>
+      </svg>
+      <div style={{position:'absolute',bottom:10,right:12,fontSize:10,color:'var(--ink-faint)',fontFamily:'DM Mono',letterSpacing:1}}>PICK UP! MAP</div>
+    </div>
+  );
+}
+
+function DriverPrefsDisplay({ driver }) {
+  const prefs = driver.prefs;
+  return (
+    <div>
+      <div style={{fontSize:12,fontWeight:800,letterSpacing:1,textTransform:'uppercase',color:'var(--ink-soft)',marginBottom:10}}>
+        Preferenze Autista
+      </div>
+      <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
+        {DRIVER_PREFS_DEF.map(p => {
+          const val = prefs[p.key];
+          return (
+            <div key={p.key} className={`driver-pref-tag ${val?'pref-yes':'pref-no'}`} title={p.desc}>
+              {p.emoji} {p.label} {val ? '✓' : '✗'}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function Nav({ user, driver, onLoginOpen, onLogout, onNavigate, currentPage }) {
+  const isIn = user||driver;
+  const name = (user||driver)?.name;
+  const initials = name ? name.split(' ').map(n=>n[0]).join('') : '';
+  return (
+    <nav>
+      <div className="nav-logo" onClick={()=>onNavigate('home')}>
+        <span>Pick Up</span><span className="excl">!</span>
+        <div className="dot"></div>
+      </div>
+      <div className="nav-links">
+        <span className={`nav-link ${currentPage==='trips'?'active':''}`} onClick={()=>onNavigate('trips')}>🗺️ Viaggi</span>
+        <span className="nav-link" onClick={()=>onNavigate('home')}>✨ Come Funziona</span>
+        {driver && <span className={`nav-link ${currentPage==='driver-dash'?'active':''}`} onClick={()=>onNavigate('driver-dash')}>🚛 Dashboard</span>}
+        {user && !driver && <span className={`nav-link ${currentPage==='user-dash'?'active':''}`} onClick={()=>onNavigate('user-dash')}>🎫 Le Mie Prenotazioni</span>}
+      </div>
+      <div className="nav-actions">
+        {!isIn ? (
+          <>
+            <button className="btn btn-ghost btn-sm" onClick={()=>onLoginOpen('login')}>Accedi</button>
+            <button className="btn btn-primary btn-sm" onClick={()=>onLoginOpen('register')}>Registrati 🎉</button>
+          </>
+        ) : (
+          <>
+            <div style={{display:'flex',alignItems:'center',gap:10}}>
+              <div className={`avatar ${driver?'avatar-driver':''}`}>{initials}</div>
+              <span style={{fontSize:14,fontWeight:700,color:'var(--ink)'}}>{name?.split(' ')[0]}</span>
+            </div>
+            <button className="btn btn-ghost btn-sm" onClick={onLogout}>Esci</button>
+          </>
+        )}
+      </div>
+    </nav>
+  );
+}
+
+function AuthModal({ mode:initMode, onClose, onLogin }) {
+  // modes: login | register | driver-login | driver-register
+  const [mode, setMode] = useState(initMode);
+  const [step, setStep] = useState(1); // for driver-register multi-step
+  const [form, setForm] = useState({
+    // common
+    name:'', email:'', password:'', confirmPassword:'',
+    // driver specific
+    phone:'', licenseNum:'', experience:'', truck:'', plate:'',
+    companyChoice:'existing', companyId:'1',
+    newCompanyName:'', newCompanyCity:'',
+    bio:'',
+  });
+  const [driverPrefsReg, setDriverPrefsReg] = useState({
+    music:true, talking:true, smoking:false, pets:false, food:true, stops:true, ac:true, quiet:false
+  });
+  const [err, setErr] = useState('');
+  const [loading, setLoading] = useState(false);
+  const up = k => e => setForm(f=>({...f,[k]:e.target.value}));
+  const togglePrefReg = k => setDriverPrefsReg(p=>({...p,[k]:!p[k]}));
+
+  const isDriverMode = mode === 'driver-login' || mode === 'driver-register';
+
+  const submitLogin = async () => {
+    setErr(''); setLoading(true);
+    await new Promise(r=>setTimeout(r,700));
+    setLoading(false);
+    if (mode==='driver-login') {
+      const d = MOCK_DRIVERS.find(d=>d.email===form.email&&d.password===form.password);
+      if (!d) { setErr('Credenziali non valide.'); return; }
+      onLogin(null,d); onClose(); return;
+    }
+    if (mode==='login') {
+      const u = MOCK_USERS.find(u=>u.email===form.email&&u.password===form.password);
+      if (!u) { setErr('Email o password errati.'); return; }
+      onLogin(u,null); onClose(); return;
+    }
+    // user register
+    if (!form.name||!form.email||!form.password) { setErr('Compila tutti i campi.'); return; }
+    if (form.password !== form.confirmPassword) { setErr('Le password non coincidono.'); return; }
+    const nu = { id:Date.now(), name:form.name, email:form.email, avatar:form.name.split(' ').map(n=>n[0]).join('') };
+    MOCK_USERS.push({...nu,password:form.password});
+    onLogin(nu,null); onClose();
+  };
+
+  const submitDriverRegStep1 = () => {
+    setErr('');
+    if (!form.name||!form.email||!form.password) { setErr('Compila nome, email e password.'); return; }
+    if (form.password !== form.confirmPassword) { setErr('Le password non coincidono.'); return; }
+    setStep(2);
+  };
+
+  const submitDriverRegStep2 = () => {
+    setErr('');
+    if (!form.truck||!form.plate||!form.experience) { setErr('Compila i dati del camion e dell\'esperienza.'); return; }
+    setStep(3);
+  };
+
+  const submitDriverRegFinal = async () => {
+    setErr(''); setLoading(true);
+    await new Promise(r=>setTimeout(r,900));
+    setLoading(false);
+
+    // resolve company
+    let companyId;
+    if (form.companyChoice === 'new') {
+      if (!form.newCompanyName||!form.newCompanyCity) { setErr('Inserisci nome e città della nuova azienda.'); return; }
+      const nc = { id: Date.now(), name: form.newCompanyName, city: form.newCompanyCity, trucks:1, drivers:1, logo:'🏢' };
+      MOCK_COMPANIES.push(nc);
+      companyId = nc.id;
+    } else {
+      companyId = parseInt(form.companyId);
+    }
+
+    const nd = {
+      id: Date.now(),
+      name: form.name,
+      email: form.email,
+      password: form.password,
+      companyId,
+      truck: form.truck || 'Camion Generico',
+      plate: form.plate.toUpperCase(),
+      experience: parseInt(form.experience) || 1,
+      rating: 5.0,
+      avatar: form.name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2),
+      bio: form.bio || `Autista professionale con ${form.experience || 1} anni di esperienza.`,
+      prefs: { ...driverPrefsReg },
+    };
+    MOCK_DRIVERS.push(nd);
+    onLogin(null, nd);
+    onClose();
+  };
+
+  const modalTitle = () => {
+    if (mode==='login') return '👋 Bentornato!';
+    if (mode==='register') return '🎉 Crea Account';
+    if (mode==='driver-login') return '🚛 Accesso Autista';
+    if (mode==='driver-register') return step===1?'🚛 Registrazione Autista':step===2?'🚛 Il Tuo Camion':'🚛 Azienda & Preferenze';
+    return '';
+  };
+
+  return (
+    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className={`modal ${mode==='driver-register'?'modal-lg':''}`}>
+        <div className="modal-header">
+          <div className="modal-title">{modalTitle()}</div>
+          <button className="modal-close" onClick={onClose}>×</button>
+        </div>
+        <div className="modal-body">
+
+          {/* TABS — top level: passeggero vs autista */}
+          <div style={{display:'flex',gap:10,marginBottom:20}}>
+            <div
+              style={{flex:1,padding:'10px 0',textAlign:'center',borderRadius:50,fontSize:13,fontWeight:800,cursor:'pointer',transition:'all 0.2s',
+                background: !isDriverMode ? 'var(--ocean)' : 'var(--sky)',
+                color: !isDriverMode ? 'white' : 'var(--ink-soft)'
+              }}
+              onClick={()=>{ setMode('login'); setStep(1); setErr(''); }}
+            >👤 Passeggero</div>
+            <div
+              style={{flex:1,padding:'10px 0',textAlign:'center',borderRadius:50,fontSize:13,fontWeight:800,cursor:'pointer',transition:'all 0.2s',
+                background: isDriverMode ? 'var(--coral)' : 'var(--sky)',
+                color: isDriverMode ? 'white' : 'var(--ink-soft)'
+              }}
+              onClick={()=>{ setMode('driver-login'); setStep(1); setErr(''); }}
+            >🚛 Autista</div>
+          </div>
+
+          {/* SUB TABS */}
+          {!isDriverMode && (
+            <div className="tabs">
+              <div className={`tab ${mode==='login'?'active':''}`} onClick={()=>{setMode('login');setErr('');}}>Accedi</div>
+              <div className={`tab ${mode==='register'?'active':''}`} onClick={()=>{setMode('register');setErr('');}}>Registrati</div>
+            </div>
+          )}
+          {isDriverMode && (
+            <div className="tabs">
+              <div className={`tab ${mode==='driver-login'?'active':''}`} onClick={()=>{setMode('driver-login');setStep(1);setErr('');}}>Accedi</div>
+              <div className={`tab ${mode==='driver-register'?'active':''}`} onClick={()=>{setMode('driver-register');setStep(1);setErr('');}}>Registrati</div>
+            </div>
+          )}
+
+          {err && <div className="alert alert-warn">⚠️ {err}</div>}
+
+          {/* ── PASSENGER LOGIN ── */}
+          {mode==='login' && (
+            <>
+              <div className="form-group"><label className="form-label">Email</label><input className="form-input" type="email" placeholder="tua@email.it" value={form.email} onChange={up('email')}/></div>
+              <div className="form-group"><label className="form-label">Password</label><input className="form-input" type="password" placeholder="••••••••" value={form.password} onChange={up('password')}/></div>
+              <div className="alert alert-info">💡 Demo: <strong>sofia@email.it</strong> / <strong>pass123</strong></div>
+              <button className="btn btn-ocean btn-full btn-lg" onClick={submitLogin} disabled={loading}>
+                {loading?<><span className="spinner"></span> Caricamento...</>:'Accedi →'}
+              </button>
+            </>
+          )}
+
+          {/* ── PASSENGER REGISTER ── */}
+          {mode==='register' && (
+            <>
+              <div className="form-group"><label className="form-label">Nome Completo</label><input className="form-input" placeholder="Mario Rossi" value={form.name} onChange={up('name')}/></div>
+              <div className="form-group"><label className="form-label">Email</label><input className="form-input" type="email" placeholder="tua@email.it" value={form.email} onChange={up('email')}/></div>
+              <div className="input-row">
+                <div className="form-group"><label className="form-label">Password</label><input className="form-input" type="password" placeholder="••••••••" value={form.password} onChange={up('password')}/></div>
+                <div className="form-group"><label className="form-label">Conferma Password</label><input className="form-input" type="password" placeholder="••••••••" value={form.confirmPassword} onChange={up('confirmPassword')}/></div>
+              </div>
+              <button className="btn btn-primary btn-full btn-lg" onClick={submitLogin} disabled={loading}>
+                {loading?<><span className="spinner"></span> Caricamento...</>:'Crea Account 🚀'}
+              </button>
+            </>
+          )}
+
+          {/* ── DRIVER LOGIN ── */}
+          {mode==='driver-login' && (
+            <>
+              <div className="form-group"><label className="form-label">Email Professionale</label><input className="form-input" type="email" placeholder="marco@logitrans.it" value={form.email} onChange={up('email')}/></div>
+              <div className="form-group"><label className="form-label">Password</label><input className="form-input" type="password" placeholder="••••••••" value={form.password} onChange={up('password')}/></div>
+              <div className="alert alert-info">💡 Demo: <strong>marco@logitrans.it</strong> / <strong>pass123</strong></div>
+              <button className="btn btn-full btn-lg" style={{background:'linear-gradient(135deg,var(--coral),#ff8060)',color:'white',boxShadow:'0 4px 16px rgba(255,107,74,0.3)'}} onClick={submitLogin} disabled={loading}>
+                {loading?<><span className="spinner"></span> Caricamento...</>:'Accedi come Autista 🚛'}
+              </button>
+            </>
+          )}
+
+          {/* ── DRIVER REGISTER STEP 1: Dati Personali ── */}
+          {mode==='driver-register' && step===1 && (
+            <>
+              <div className="alert alert-info" style={{marginBottom:16}}>
+                📋 Step 1 di 3 — Dati personali e credenziali di accesso
+              </div>
+              <div className="form-group"><label className="form-label">Nome Completo</label><input className="form-input" placeholder="Mario Rossi" value={form.name} onChange={up('name')}/></div>
+              <div className="form-group"><label className="form-label">Email Professionale</label><input className="form-input" type="email" placeholder="mario@azienda.it" value={form.email} onChange={up('email')}/></div>
+              <div className="form-group"><label className="form-label">Telefono</label><input className="form-input" type="tel" placeholder="+39 333 123 4567" value={form.phone} onChange={up('phone')}/></div>
+              <div className="input-row">
+                <div className="form-group"><label className="form-label">Password</label><input className="form-input" type="password" placeholder="••••••••" value={form.password} onChange={up('password')}/></div>
+                <div className="form-group"><label className="form-label">Conferma Password</label><input className="form-input" type="password" placeholder="••••••••" value={form.confirmPassword} onChange={up('confirmPassword')}/></div>
+              </div>
+              <div style={{display:'flex',justifyContent:'flex-end'}}>
+                <button className="btn btn-lg" style={{background:'linear-gradient(135deg,var(--coral),#ff8060)',color:'white'}} onClick={submitDriverRegStep1}>
+                  Avanti: Il Tuo Camion →
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* ── DRIVER REGISTER STEP 2: Camion & Esperienza ── */}
+          {mode==='driver-register' && step===2 && (
+            <>
+              <div className="alert alert-info" style={{marginBottom:16}}>
+                🚛 Step 2 di 3 — Dati del tuo camion e patente professionale
+              </div>
+              <div className="input-row">
+                <div className="form-group"><label className="form-label">Modello Camion</label><input className="form-input" placeholder="es. Volvo FH 2022" value={form.truck} onChange={up('truck')}/></div>
+                <div className="form-group"><label className="form-label">Targa</label><input className="form-input" placeholder="MI 123 AB" value={form.plate} onChange={up('plate')}/></div>
+              </div>
+              <div className="input-row">
+                <div className="form-group"><label className="form-label">Anni di Esperienza</label><input className="form-input" type="number" min="1" max="50" placeholder="es. 8" value={form.experience} onChange={up('experience')}/></div>
+                <div className="form-group"><label className="form-label">N° Patente CQC</label><input className="form-input" placeholder="CQC-2024-XXXXXX" value={form.licenseNum} onChange={up('licenseNum')}/></div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Bio / Presentazione (opzionale)</label>
+                <textarea className="form-textarea" placeholder="Raccontati ai passeggeri: stile di guida, cosa ami del mestiere..." value={form.bio} onChange={up('bio')} style={{minHeight:70}}/>
+              </div>
+              <div style={{display:'flex',justifyContent:'space-between'}}>
+                <button className="btn btn-ghost" onClick={()=>setStep(1)}>← Indietro</button>
+                <button className="btn btn-lg" style={{background:'linear-gradient(135deg,var(--coral),#ff8060)',color:'white'}} onClick={submitDriverRegStep2}>
+                  Avanti: Azienda & Preferenze →
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* ── DRIVER REGISTER STEP 3: Azienda + Preferenze a bordo ── */}
+          {mode==='driver-register' && step===3 && (
+            <>
+              <div className="alert alert-info" style={{marginBottom:16}}>
+                🏢 Step 3 di 3 — Associa la tua azienda e imposta le preferenze a bordo
+              </div>
+
+              {/* Company */}
+              <div className="form-group">
+                <label className="form-label">Azienda di Trasporto</label>
+                <div style={{display:'flex',gap:10,marginBottom:12}}>
+                  <div
+                    style={{flex:1,padding:'10px 14px',borderRadius:12,border:`2px solid ${form.companyChoice==='existing'?'var(--ocean)':'var(--border-mid)'}`,
+                      background:form.companyChoice==='existing'?'var(--sky)':'white',cursor:'pointer',textAlign:'center',fontWeight:700,fontSize:13,transition:'all 0.2s'}}
+                    onClick={()=>up('companyChoice')({target:{value:'existing'}})}
+                  >
+                    🏢 Azienda Esistente
+                  </div>
+                  <div
+                    style={{flex:1,padding:'10px 14px',borderRadius:12,border:`2px solid ${form.companyChoice==='new'?'var(--coral)':'var(--border-mid)'}`,
+                      background:form.companyChoice==='new'?'rgba(255,107,74,0.06)':'white',cursor:'pointer',textAlign:'center',fontWeight:700,fontSize:13,transition:'all 0.2s'}}
+                    onClick={()=>up('companyChoice')({target:{value:'new'}})}
+                  >
+                    ✨ Nuova Azienda
+                  </div>
+                </div>
+
+                {form.companyChoice==='existing' && (
+                  <select className="form-select" value={form.companyId} onChange={up('companyId')}>
+                    {MOCK_COMPANIES.map(c=><option key={c.id} value={c.id}>{c.logo} {c.name} — {c.city}</option>)}
+                  </select>
+                )}
+                {form.companyChoice==='new' && (
+                  <div className="input-row">
+                    <div className="form-group" style={{margin:0}}><label className="form-label">Nome Azienda</label><input className="form-input" placeholder="es. SudTrasporti Srl" value={form.newCompanyName} onChange={up('newCompanyName')}/></div>
+                    <div className="form-group" style={{margin:0}}><label className="form-label">Città Sede</label><input className="form-input" placeholder="es. Napoli" value={form.newCompanyCity} onChange={up('newCompanyCity')}/></div>
+                  </div>
+                )}
+              </div>
+
+              {/* Prefs */}
+              <div className="form-group">
+                <label className="form-label">Preferenze a Bordo del Tuo Camion</label>
+                <div style={{fontSize:12,color:'var(--ink-faint)',fontWeight:600,marginBottom:10}}>
+                  Clicca per attivare/disattivare — i passeggeri le vedranno prima di prenotare
+                </div>
+                <div className="prefs-grid">
+                  {DRIVER_PREFS_DEF.map(p=>(
+                    <div
+                      key={p.key}
+                      className={`pref-card ${driverPrefsReg[p.key]?'selected':'refused'}`}
+                      style={{cursor:'pointer'}}
+                      onClick={()=>togglePrefReg(p.key)}
+                      title={p.desc}
+                    >
+                      <span className="pref-emoji">{p.emoji}</span>
+                      <div className="pref-label" style={{color:driverPrefsReg[p.key]?'var(--mint-dim)':'var(--coral)'}}>
+                        {driverPrefsReg[p.key]?'✓':'✗'} {p.label}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:8}}>
+                <button className="btn btn-ghost" onClick={()=>setStep(2)}>← Indietro</button>
+                <button className="btn btn-lg" style={{background:'linear-gradient(135deg,var(--coral),#ff8060)',color:'white',boxShadow:'0 4px 16px rgba(255,107,74,0.3)'}} onClick={submitDriverRegFinal} disabled={loading}>
+                  {loading?<><span className="spinner"></span> Registrazione...</>:'Completa Registrazione 🚛'}
+                </button>
+              </div>
+            </>
+          )}
+
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TripCard({ trip, onClick }) {
+  const driver = getDriver(trip.driverId);
+  const company = driver ? getCompany(driver.companyId) : null;
+  const pct = ((trip.seats-trip.seatsLeft)/trip.seats)*100;
+  const isFull = trip.seatsLeft===0;
+  const duration = calcDuration(trip.departure, trip.arrival) || calcDurationFromKm(trip.distance);
+  return (
+    <div className={`card trip-card`} style={{opacity:isFull?0.7:1}} onClick={()=>!isFull&&onClick(trip)}>
+      <div className="trip-top">
+        <div className="trip-price-tag">
+          €{trip.price}
+          <div className="trip-price-small">A PERSONA</div>
+        </div>
+        <div className="route-row">
+          <div className="city">{trip.from}</div>
+          <div className="route-line">
+            <div className="route-dot"></div>
+            <div className="route-dash"></div>
+            <div className="route-arrow-icon">✈️</div>
+          </div>
+          <div className="city">{trip.to}</div>
+        </div>
+        {duration && (
+          <div style={{marginTop:8,display:'inline-flex',alignItems:'center',gap:5,background:'rgba(26,127,191,0.12)',borderRadius:50,padding:'4px 12px',fontSize:12,fontWeight:800,color:'var(--ocean)'}}>
+            ⏱️ {duration} di viaggio
+          </div>
+        )}
+      </div>
+      <div className="trip-body">
+        <div className="trip-meta-row">
+          <div className="meta-pill">📅 {fmtDate(trip.departure)}</div>
+          <div className="meta-pill">⏰ {fmtTime(trip.departure)}</div>
+          <div className="meta-pill">📍 {trip.distance}</div>
+          <div className="meta-pill" style={{background: isFull?'rgba(255,107,74,0.1)':trip.seatsLeft===1?'rgba(255,184,48,0.15)':'var(--sky)', color:isFull?'var(--coral)':trip.seatsLeft===1?'#a07600':'var(--ink-soft)'}}>
+            💺 {isFull?'Completo':`${trip.seatsLeft} posti`}
+          </div>
+        </div>
+        {driver && (
+          <div className="driver-strip">
+            <div className="avatar avatar-driver" style={{width:30,height:30,fontSize:11}}>{driver.avatar}</div>
+            <div style={{flex:1}}>
+              <span style={{fontWeight:700,fontSize:13,color:'var(--ink)'}}>{driver.name}</span>
+              <span style={{marginLeft:8}} className="company-badge">🏢 {company?.name}</span>
+            </div>
+            <span style={{fontSize:13,fontWeight:800,color:'#a07600'}}>★ {driver.rating}</span>
+          </div>
+        )}
+        {/* Mini prefs preview */}
+        {driver && (
+          <div style={{display:'flex',gap:6,flexWrap:'wrap',marginTop:10}}>
+            {DRIVER_PREFS_DEF.slice(0,5).map(p => (
+              <span key={p.key} title={p.desc} style={{fontSize:16, opacity: driver.prefs[p.key] ? 1 : 0.25}}>{p.emoji}</span>
+            ))}
+          </div>
+        )}
+        <div className="seats-bar">
+          <div className="seats-fill" style={{width:`${pct}%`, background: isFull?'var(--coral)':pct>70?'var(--mango)':'var(--mint)'}}></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── BOOKING MODAL (with driver preferences) ──────────────────────────────────
+
+function BookingModal({ trip, user, onClose, onBook }) {
+  const [seats, setSeats] = useState(1);
+  const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [prefAck, setPrefAck] = useState(false);
+  const driver = getDriver(trip.driverId);
+  const company = driver ? getCompany(driver.companyId) : null;
+  const total = seats * trip.price;
+
+  const handleBook = async () => {
+    setLoading(true);
+    await new Promise(r=>setTimeout(r,1300));
+    setLoading(false); setStep(3);
+    onBook(trip, seats);
+  };
+
+  const bookingCode = '#PU-' + Math.random().toString(36).substr(2,8).toUpperCase();
+
+  return (
+    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal modal-xl">
+        <div className="modal-header">
+          <div className="modal-title">🎫 Prenota il Viaggio</div>
+          <button className="modal-close" onClick={onClose}>×</button>
+        </div>
+        <div className="modal-body">
+
+          {step < 3 && (
+            <div className="steps">
+              <div className={`step ${step>=1?'done':''}`}>
+                <div className="step-circle">✓</div>
+                <div className="step-label">Viaggio</div>
+              </div>
+              <div className={`step-line ${step>=2?'done':''}`}></div>
+              <div className={`step ${step===2?'active':step>2?'done':''}`}>
+                <div className="step-circle">{step>2?'✓':'2'}</div>
+                <div className="step-label">Autista & Pref.</div>
+              </div>
+              <div className="step-line"></div>
+              <div className={`step ${step===3?'active':''}`}>
+                <div className="step-circle">3</div>
+                <div className="step-label">Pagamento</div>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 3: SUCCESS */}
+          {step === 3 && (
+            <div style={{textAlign:'center',padding:'28px 0'}}>
+              <div style={{fontSize:80,marginBottom:12}}>🎉</div>
+              <div className="modal-title" style={{fontSize:34,marginBottom:10}}>Prenotazione Confermata!</div>
+              <p style={{color:'var(--ink-soft)',marginBottom:24,fontSize:15}}>
+                Ottimo! Sei pronto per il viaggio da <strong>{trip.from}</strong> a <strong>{trip.to}</strong>!
+              </p>
+              <div className="alert alert-success">
+                ✅ Codice prenotazione: <strong className="mono">{bookingCode}</strong> — Mostralo all'autista!
+              </div>
+              <div style={{background:'var(--sky)',borderRadius:14,padding:16,marginTop:16,marginBottom:16}}>
+                <div style={{fontSize:13,fontWeight:700,color:'var(--ink-soft)',marginBottom:8}}>Ricorda le preferenze dell'autista:</div>
+                <DriverPrefsDisplay driver={driver}/>
+              </div>
+              <button className="btn btn-primary btn-lg" onClick={onClose}>Perfetto! 🚀</button>
+            </div>
+          )}
+
+          {/* STEP 1: TRIP OVERVIEW + SEATS */}
+          {step === 1 && (
+            <div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:20,marginBottom:20}}>
+                <div>
+                  <div className="detail-hero" style={{marginBottom:0}}>
+                    <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:14}}>
+                      <div className="detail-city" style={{fontSize:32}}>{trip.from}</div>
+                      <div className="detail-arrow" style={{fontSize:22}}>→</div>
+                      <div className="detail-city" style={{fontSize:32}}>{trip.to}</div>
+                    </div>
+                    <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+                      <div className="meta-pill">📅 {fmtDate(trip.departure)}</div>
+                      <div className="meta-pill">⏰ {fmtTime(trip.departure)}</div>
+                      <div className="meta-pill">📍 {trip.distance}</div>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <MapView from={trip.from} to={trip.to} height={140}/>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Numero di Posti</label>
+                <div style={{display:'flex',gap:8}}>
+                  {Array.from({length:Math.min(trip.seatsLeft,4)},(_,i)=>i+1).map(n=>(
+                    <button key={n} className={`btn ${seats===n?'btn-primary':'btn-outline'} btn-sm`} onClick={()=>setSeats(n)} style={{width:50,justifyContent:'center'}}>
+                      {n}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="divider"></div>
+
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <div>
+                  <div style={{fontSize:12,color:'var(--ink-faint)',fontWeight:700}}>TOTALE</div>
+                  <div style={{fontFamily:'Righteous',fontSize:48,color:'var(--coral)',lineHeight:1}}>€{total}</div>
+                  <div style={{fontSize:12,color:'var(--ink-faint)',fontWeight:600}}>{seats} posto/i × €{trip.price}</div>
+                </div>
+                <button className="btn btn-ocean btn-lg" onClick={()=>setStep(2)}>
+                  Vedi Autista →
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 2: DRIVER + PREFERENCES */}
+          {step === 2 && (
+            <div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:20,marginBottom:20}}>
+                {/* Driver profile */}
+                <div>
+                  <div style={{fontSize:12,fontWeight:800,letterSpacing:1,textTransform:'uppercase',color:'var(--ink-soft)',marginBottom:10}}>Il Tuo Autista</div>
+                  <div style={{background:'linear-gradient(135deg,var(--sky),#d0eeff)',borderRadius:16,padding:20,border:'1.5px solid var(--border)'}}>
+                    <div style={{display:'flex',gap:14,alignItems:'flex-start',marginBottom:16}}>
+                      <div className="avatar avatar-driver avatar-lg">{driver.avatar}</div>
+                      <div>
+                        <div style={{fontWeight:800,fontSize:17,color:'var(--ink)',marginBottom:4}}>{driver.name}</div>
+                        <div style={{fontSize:12,color:'var(--ink-soft)',marginBottom:6}}>🚛 {driver.truck} · {driver.plate}</div>
+                        <div className="company-badge">🏢 {company?.name}</div>
+                        <div style={{marginTop:8,display:'flex',gap:12}}>
+                          <span style={{fontSize:14,fontWeight:800,color:'#a07600'}}>★ {driver.rating}</span>
+                          <span style={{fontSize:12,color:'var(--ink-faint)',fontWeight:600}}>{driver.experience} anni di esperienza</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{fontSize:13,color:'var(--ink-soft)',fontStyle:'italic',borderTop:'1px solid var(--border)',paddingTop:12,lineHeight:1.6}}>
+                      "{driver.bio}"
+                    </div>
+                  </div>
+                </div>
+
+                {/* Preferences detail */}
+                <div>
+                  <div style={{fontSize:12,fontWeight:800,letterSpacing:1,textTransform:'uppercase',color:'var(--ink-soft)',marginBottom:10}}>
+                    Regole & Preferenze a Bordo
+                  </div>
+                  <div className="prefs-grid">
+                    {DRIVER_PREFS_DEF.map(p => {
+                      const val = driver.prefs[p.key];
+                      return (
+                        <div key={p.key} className={`pref-card ${val?'selected':'refused'}`} title={p.desc}>
+                          <span className="pref-emoji">{p.emoji}</span>
+                          <div className="pref-label" style={{color: val?'var(--mint-dim)':'var(--coral)'}}>
+                            {val ? '✓' : '✗'} {p.label}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Note dell'autista */}
+              {trip.notes && (
+                <div className="alert alert-info" style={{marginBottom:16}}>
+                  📝 <span><strong>Note dell'autista:</strong> {trip.notes}</span>
+                </div>
+              )}
+
+              {/* Acknowledgment */}
+              <div style={{
+                background: prefAck ? 'rgba(61,203,142,0.08)' : 'var(--sky)',
+                border: `1.5px solid ${prefAck ? 'var(--mint)' : 'var(--border-mid)'}`,
+                borderRadius:14, padding:16, marginBottom:20, cursor:'pointer',
+                display:'flex', alignItems:'flex-start', gap:12,
+                transition:'all 0.2s'
+              }} onClick={()=>setPrefAck(!prefAck)}>
+                <div style={{
+                  width:22,height:22,borderRadius:6,border:`2px solid ${prefAck?'var(--mint)':'var(--border-mid)'}`,
+                  background:prefAck?'var(--mint)':'white',
+                  display:'flex',alignItems:'center',justifyContent:'center',
+                  flexShrink:0, marginTop:1, transition:'all 0.2s'
+                }}>
+                  {prefAck && <span style={{color:'white',fontSize:13,fontWeight:900}}>✓</span>}
+                </div>
+                <div>
+                  <div style={{fontWeight:800,fontSize:14,color:'var(--ink)',marginBottom:3}}>
+                    Ho letto e accetto le preferenze dell'autista
+                  </div>
+                  <div style={{fontSize:12,color:'var(--ink-soft)',lineHeight:1.5}}>
+                    Confermo di rispettare le regole a bordo per un viaggio piacevole per tutti.
+                  </div>
+                </div>
+              </div>
+
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <button className="btn btn-ghost" onClick={()=>setStep(1)}>← Indietro</button>
+                <button className={`btn btn-lg ${prefAck?'btn-primary':'btn-outline'}`} onClick={()=>prefAck&&setStep(3)} style={{opacity:prefAck?1:0.6}}>
+                  Vai al Pagamento →
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 3 redirect → payment */}
+          {step === 3 && step !== 3 && (
+            <>
+              <div className="alert alert-info">🔒 Pagamento sicuro simulato</div>
+              <div className="input-row">
+                <div className="form-group" style={{gridColumn:'1/-1'}}>
+                  <label className="form-label">Numero Carta</label>
+                  <input className="form-input" placeholder="4242 4242 4242 4242"/>
+                </div>
+                <div className="form-group"><label className="form-label">Scadenza</label><input className="form-input" placeholder="MM/AA"/></div>
+                <div className="form-group"><label className="form-label">CVV</label><input className="form-input" placeholder="123"/></div>
+              </div>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:8}}>
+                <button className="btn btn-ghost" onClick={()=>setStep(2)}>← Indietro</button>
+                <button className="btn btn-primary btn-lg" onClick={handleBook} disabled={loading}>
+                  {loading ? <><span className="spinner"></span> Elaborazione...</> : `💳 Paga €${total}`}
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* Actually show payment at step 3 (pre-success) */}
+          {step === 10 && null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Rewrite step handling correctly
+function BookingModalFixed({ trip, user, onClose, onBook }) {
+  const [seats, setSeats] = useState(1);
+  const [phase, setPhase] = useState('info'); // info | prefs | pay | done
+  const [loading, setLoading] = useState(false);
+  const [prefAck, setPrefAck] = useState(false);
+  const driver = getDriver(trip.driverId);
+  const company = driver ? getCompany(driver.companyId) : null;
+  const total = seats * trip.price;
+  const code = '#PU-' + Math.random().toString(36).substr(2,8).toUpperCase();
+  const duration = calcDuration(trip.departure, trip.arrival) || calcDurationFromKm(trip.distance);
+
+  const phases = ['info','prefs','pay','done'];
+  const phaseIdx = phases.indexOf(phase);
+
+  const handleFinalBook = async () => {
+    setLoading(true);
+    await new Promise(r=>setTimeout(r,1200));
+    setLoading(false);
+    onBook(trip,seats);
+    setPhase('done');
+  };
+
+  return (
+    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal modal-xl">
+        <div className="modal-header">
+          <div className="modal-title">🎫 Prenota Viaggio</div>
+          <button className="modal-close" onClick={onClose}>×</button>
+        </div>
+        <div className="modal-body">
+
+          {phase !== 'done' && (
+            <div className="steps">
+              {[{id:'info',label:'Dettagli'},{id:'prefs',label:'Autista'},{id:'pay',label:'Pagamento'}].map((s,i,arr)=>(
+                <React.Fragment key={s.id}>
+                  <div className={`step ${phaseIdx>i?'done':phaseIdx===i?'active':''}`}>
+                    <div className="step-circle">{phaseIdx>i?'✓':i+1}</div>
+                    <div className="step-label">{s.label}</div>
+                  </div>
+                  {i<arr.length-1 && <div className={`step-line ${phaseIdx>i?'done':''}`}></div>}
+                </React.Fragment>
+              ))}
+            </div>
+          )}
+
+          {phase==='done' && (
+            <div style={{textAlign:'center',padding:'24px 0'}}>
+              <div style={{fontSize:76,marginBottom:12}}>🎉</div>
+              <div style={{fontFamily:'Righteous',fontSize:32,marginBottom:10,color:'var(--ink)'}}>Tutto Confermato!</div>
+              <p style={{color:'var(--ink-soft)',marginBottom:20,fontSize:15,lineHeight:1.6}}>
+                Il tuo posto da <strong>{trip.from}</strong> → <strong>{trip.to}</strong> è assicurato!
+              </p>
+              {/* Duration summary in confirmation */}
+              {duration && (
+                <div style={{display:'inline-flex',alignItems:'center',gap:10,background:'rgba(26,127,191,0.08)',border:'1.5px solid rgba(26,127,191,0.18)',borderRadius:12,padding:'10px 20px',marginBottom:16}}>
+                  <span style={{fontSize:22}}>⏱️</span>
+                  <div style={{textAlign:'left'}}>
+                    <div style={{fontSize:11,fontWeight:800,color:'var(--ocean)',letterSpacing:0.5}}>DURATA VIAGGIO</div>
+                    <div style={{fontFamily:'Righteous',fontSize:22,color:'var(--ocean)',lineHeight:1.2}}>{duration}</div>
+                  </div>
+                  <div style={{marginLeft:12,borderLeft:'1px solid rgba(26,127,191,0.2)',paddingLeft:12,textAlign:'left'}}>
+                    <div style={{fontSize:11,fontWeight:800,color:'var(--ink-faint)'}}>PARTENZA</div>
+                    <div style={{fontWeight:700,color:'var(--ink)',fontSize:13}}>{fmtDate(trip.departure)} · {fmtTime(trip.departure)}</div>
+                  </div>
+                </div>
+              )}
+              <div className="alert alert-success" style={{textAlign:'left'}}>
+                ✅ Codice: <strong className="mono">{code}</strong> — Mostralo all'autista alla partenza
+              </div>
+              <div style={{background:'var(--sky)',borderRadius:14,padding:16,margin:'16px 0',textAlign:'left'}}>
+                <div style={{fontSize:12,fontWeight:800,letterSpacing:1,textTransform:'uppercase',color:'var(--ink-soft)',marginBottom:10}}>Ricorda le preferenze a bordo:</div>
+                <DriverPrefsDisplay driver={driver}/>
+              </div>
+              <button className="btn btn-primary btn-lg" onClick={onClose}>Perfetto, a presto! 🚀</button>
+            </div>
+          )}
+
+          {phase==='info' && (
+            <div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:20,marginBottom:20}}>
+                <div className="detail-hero" style={{marginBottom:0}}>
+                  <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14}}>
+                    <div className="detail-city" style={{fontSize:30}}>{trip.from}</div>
+                    <div className="detail-arrow" style={{fontSize:20}}>→</div>
+                    <div className="detail-city" style={{fontSize:30}}>{trip.to}</div>
+                  </div>
+                  <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:12}}>
+                    <div className="meta-pill">📅 {fmtDate(trip.departure)}</div>
+                    <div className="meta-pill">⏰ {fmtTime(trip.departure)}</div>
+                    <div className="meta-pill">📍 {trip.distance}</div>
+                    {duration && (
+                      <div className="meta-pill" style={{background:'rgba(26,127,191,0.12)',color:'var(--ocean)',fontWeight:800}}>
+                        ⏱️ {duration}
+                      </div>
+                    )}
+                  </div>
+                  {duration && (
+                    <div style={{background:'rgba(26,127,191,0.08)',borderRadius:10,padding:'10px 14px',border:'1px solid rgba(26,127,191,0.15)',marginBottom:10}}>
+                      <div style={{fontSize:11,fontWeight:800,color:'var(--ocean)',letterSpacing:0.5,marginBottom:3}}>⏱️ DURATA STIMATA DEL VIAGGIO</div>
+                      <div style={{fontFamily:'Righteous',fontSize:28,color:'var(--ocean)',lineHeight:1}}>{duration}</div>
+                      <div style={{fontSize:11,color:'var(--ink-faint)',marginTop:3,fontWeight:600}}>
+                        Partenza {fmtTime(trip.departure)} · Arrivo stimato {fmtTime(trip.arrival)}
+                      </div>
+                    </div>
+                  )}
+                  {trip.notes && <div style={{fontSize:13,color:'var(--ink-soft)',fontStyle:'italic'}}>💬 {trip.notes}</div>}
+                </div>
+                <MapView from={trip.from} to={trip.to} height={160}/>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Quanti Posti? (max {Math.min(trip.seatsLeft,4)})</label>
+                <div style={{display:'flex',gap:8}}>
+                  {Array.from({length:Math.min(trip.seatsLeft,4)},(_,i)=>i+1).map(n=>(
+                    <button key={n} className={`btn ${seats===n?'btn-primary':'btn-outline'} btn-sm`} onClick={()=>setSeats(n)} style={{width:52,justifyContent:'center'}}>
+                      {n}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="divider"></div>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <div>
+                  <div style={{fontSize:11,color:'var(--ink-faint)',fontWeight:800,letterSpacing:1}}>TOTALE</div>
+                  <div style={{fontFamily:'Righteous',fontSize:48,color:'var(--coral)',lineHeight:1}}>€{total}</div>
+                  <div style={{fontSize:12,color:'var(--ink-faint)',fontWeight:600}}>{seats}×€{trip.price}</div>
+                </div>
+                <button className="btn btn-ocean btn-lg" onClick={()=>setPhase('prefs')}>Avanti: Conosci l'Autista →</button>
+              </div>
+            </div>
+          )}
+
+          {phase==='prefs' && (
+            <div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:20,marginBottom:20}}>
+                <div>
+                  <div style={{fontSize:11,fontWeight:800,letterSpacing:1.2,textTransform:'uppercase',color:'var(--ink-soft)',marginBottom:10}}>Il Tuo Autista</div>
+                  <div style={{background:'linear-gradient(135deg,var(--sky),#d0eeff)',borderRadius:16,padding:20,border:'1.5px solid var(--border)',height:'calc(100% - 28px)'}}>
+                    <div style={{display:'flex',gap:12,marginBottom:14}}>
+                      <div className="avatar avatar-driver avatar-lg">{driver.avatar}</div>
+                      <div>
+                        <div style={{fontWeight:800,fontSize:16,color:'var(--ink)',marginBottom:3}}>{driver.name}</div>
+                        <div style={{fontSize:12,color:'var(--ink-soft)',marginBottom:6}}>🚛 {driver.truck}</div>
+                        <div style={{display:'flex',alignItems:'center',gap:8}}>
+                          <span style={{fontSize:14,fontWeight:800,color:'#a07600'}}>★ {driver.rating}</span>
+                          <span style={{fontSize:12,color:'var(--ink-faint)',fontWeight:600}}>{driver.experience} anni esp.</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{fontSize:13,color:'var(--ink-soft)',fontStyle:'italic',lineHeight:1.6,borderTop:'1px solid var(--border)',paddingTop:12}}>
+                      "{driver.bio}"
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <div style={{fontSize:11,fontWeight:800,letterSpacing:1.2,textTransform:'uppercase',color:'var(--ink-soft)',marginBottom:10}}>Regole a Bordo</div>
+                  <div className="prefs-grid">
+                    {DRIVER_PREFS_DEF.map(p => {
+                      const val = driver.prefs[p.key];
+                      return (
+                        <div key={p.key} className={`pref-card ${val?'selected':'refused'}`} title={p.desc}>
+                          <span className="pref-emoji">{p.emoji}</span>
+                          <div className="pref-label" style={{color:val?'var(--mint-dim)':'var(--coral)'}}>
+                            {val?'✓':'✗'} {p.label}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  background: prefAck?'rgba(61,203,142,0.08)':'var(--sky)',
+                  border:`2px solid ${prefAck?'var(--mint)':'var(--border-mid)'}`,
+                  borderRadius:14, padding:16, cursor:'pointer',
+                  display:'flex', alignItems:'flex-start', gap:12, marginBottom:20,
+                  transition:'all 0.2s'
+                }}
+                onClick={()=>setPrefAck(!prefAck)}
+              >
+                <div style={{
+                  width:24,height:24,borderRadius:7,border:`2px solid ${prefAck?'var(--mint)':'var(--border-mid)'}`,
+                  background:prefAck?'var(--mint)':'white', display:'flex',alignItems:'center',justifyContent:'center',
+                  flexShrink:0, marginTop:1, transition:'all 0.2s'
+                }}>
+                  {prefAck && <span style={{color:'white',fontSize:14,fontWeight:900}}>✓</span>}
+                </div>
+                <div>
+                  <div style={{fontWeight:800,fontSize:14,color:'var(--ink)',marginBottom:3}}>
+                    Ho letto e accetto tutte le preferenze dell'autista
+                  </div>
+                  <div style={{fontSize:12,color:'var(--ink-soft)',lineHeight:1.5}}>
+                    Mi impegno a rispettare le regole a bordo per garantire un viaggio sereno a tutti.
+                  </div>
+                </div>
+              </div>
+
+              <div style={{display:'flex',justifyContent:'space-between'}}>
+                <button className="btn btn-ghost" onClick={()=>setPhase('info')}>← Indietro</button>
+                <button
+                  className={`btn btn-lg ${prefAck?'btn-primary':'btn-outline'}`}
+                  style={{opacity:prefAck?1:0.55, cursor:prefAck?'pointer':'not-allowed'}}
+                  onClick={()=>{if(prefAck)setPhase('pay');}}
+                >
+                  Vai al Pagamento →
+                </button>
+              </div>
+            </div>
+          )}
+
+          {phase==='pay' && (
+            <div>
+              <div className="alert alert-info">🔒 Pagamento sicuro — ambiente di demo</div>
+              <div className="input-row">
+                <div className="form-group" style={{gridColumn:'1/-1'}}>
+                  <label className="form-label">Numero Carta</label>
+                  <input className="form-input" placeholder="4242 4242 4242 4242" maxLength={19}/>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Scadenza</label>
+                  <input className="form-input" placeholder="MM/AA"/>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">CVV</label>
+                  <input className="form-input" placeholder="123" maxLength={3}/>
+                </div>
+                <div className="form-group" style={{gridColumn:'1/-1'}}>
+                  <label className="form-label">Nome sulla Carta</label>
+                  <input className="form-input" placeholder={user?.name} defaultValue={user?.name}/>
+                </div>
+              </div>
+              <div style={{background:'var(--sky)',borderRadius:14,padding:16,marginBottom:20}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                  <span style={{fontWeight:700,color:'var(--ink-soft)'}}>{trip.from} → {trip.to} × {seats}</span>
+                  <span style={{fontFamily:'Righteous',fontSize:28,color:'var(--coral)'}}>€{total}</span>
+                </div>
+              </div>
+              <div style={{display:'flex',justifyContent:'space-between'}}>
+                <button className="btn btn-ghost" onClick={()=>setPhase('prefs')}>← Indietro</button>
+                <button className="btn btn-primary btn-lg" onClick={handleFinalBook} disabled={loading}>
+                  {loading ? <><span className="spinner"></span> Elaborazione...</> : `💳 Paga €${total}`}
+                </button>
+              </div>
+            </div>
+          )}
+
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TripDetailModal({ trip, user, onClose, onBookOpen }) {
+  const driver = getDriver(trip.driverId);
+  const company = driver ? getCompany(driver.companyId) : null;
+  const duration = calcDuration(trip.departure, trip.arrival) || calcDurationFromKm(trip.distance);
+  return (
+    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal modal-xl">
+        <div className="modal-header">
+          <div className="modal-title">✈️ Dettaglio Viaggio</div>
+          <button className="modal-close" onClick={onClose}>×</button>
+        </div>
+        <div className="modal-body">
+          <div className="detail-hero">
+            <div style={{display:'flex',alignItems:'center',marginBottom:20,flexWrap:'wrap',gap:8}}>
+              <div>
+                <div style={{fontSize:11,color:'var(--ink-faint)',fontWeight:800,letterSpacing:1,marginBottom:4}}>PARTENZA</div>
+                <div className="detail-city">{trip.from}</div>
+                <div className="meta-pill" style={{marginTop:6}}>{fmtDate(trip.departure)} • {fmtTime(trip.departure)}</div>
+              </div>
+              <div style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'0 8px'}}>
+                <div className="detail-arrow">✈️</div>
+                {duration && (
+                  <div style={{background:'rgba(26,127,191,0.12)',borderRadius:50,padding:'4px 12px',fontSize:12,fontWeight:800,color:'var(--ocean)',marginTop:4,whiteSpace:'nowrap'}}>
+                    ⏱️ {duration}
+                  </div>
+                )}
+              </div>
+              <div>
+                <div style={{fontSize:11,color:'var(--ink-faint)',fontWeight:800,letterSpacing:1,marginBottom:4}}>ARRIVO</div>
+                <div className="detail-city">{trip.to}</div>
+                <div className="meta-pill" style={{marginTop:6}}>{fmtDate(trip.arrival)} • {fmtTime(trip.arrival)}</div>
+              </div>
+              <div style={{marginLeft:'auto',textAlign:'right'}}>
+                <div style={{fontFamily:'Righteous',fontSize:64,color:'var(--coral)',lineHeight:1}}>€{trip.price}</div>
+                <div style={{fontSize:11,color:'var(--ink-faint)',fontWeight:800}}>A PERSONA</div>
+                <div style={{marginTop:8}}><span className="badge badge-green">💺 {trip.seatsLeft} posti liberi</span></div>
+              </div>
+            </div>
+            <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+              <div className="meta-pill">📍 {trip.distance}</div>
+              {duration && <div className="meta-pill" style={{background:'rgba(26,127,191,0.1)',color:'var(--ocean)'}}>⏱️ {duration} di viaggio</div>}
+              {trip.notes && <div className="meta-pill">💬 {trip.notes}</div>}
+            </div>
+          </div>
+
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:20,marginBottom:24}}>
+            <div>
+              <div style={{fontSize:11,fontWeight:800,letterSpacing:1.2,textTransform:'uppercase',color:'var(--ink-soft)',marginBottom:10}}>Percorso</div>
+              <MapView from={trip.from} to={trip.to} height={220}/>
+            </div>
+            <div>
+              <div style={{fontSize:11,fontWeight:800,letterSpacing:1.2,textTransform:'uppercase',color:'var(--ink-soft)',marginBottom:10}}>Autista</div>
+              <div style={{background:'linear-gradient(135deg,var(--sky),#d0eeff)',borderRadius:16,padding:18,border:'1.5px solid var(--border)',marginBottom:12}}>
+                <div style={{display:'flex',gap:12,marginBottom:12}}>
+                  <div className="avatar avatar-driver avatar-lg">{driver.avatar}</div>
+                  <div>
+                    <div style={{fontWeight:800,fontSize:15,marginBottom:3}}>{driver.name}</div>
+                    <div style={{fontSize:12,color:'var(--ink-soft)',marginBottom:6}}>🚛 {driver.truck} · {driver.plate}</div>
+                    <div className="company-badge">🏢 {company?.name}</div>
+                    <div style={{marginTop:6}}><span style={{fontSize:13,fontWeight:800,color:'#a07600'}}>★ {driver.rating}</span> <span style={{fontSize:12,color:'var(--ink-faint)',fontWeight:600}}>{driver.experience} anni</span></div>
+                  </div>
+                </div>
+                <div style={{fontSize:13,color:'var(--ink-soft)',fontStyle:'italic',borderTop:'1px solid var(--border)',paddingTop:10,lineHeight:1.6}}>"{driver.bio}"</div>
+              </div>
+              <DriverPrefsDisplay driver={driver}/>
+            </div>
+          </div>
+
+          <div style={{display:'flex',justifyContent:'flex-end',gap:12}}>
+            <button className="btn btn-ghost btn-lg" onClick={onClose}>Chiudi</button>
+            {user ? (
+              <button className="btn btn-primary btn-lg" onClick={()=>onBookOpen(trip)}>
+                🎫 Prenota — €{trip.price}
+              </button>
+            ) : (
+              <button className="btn btn-ocean btn-lg" onClick={onClose}>Accedi per Prenotare</button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── HOME ─────────────────────────────────────────────────────────────────────
+
+function HomePage({ onNavigate, onLoginOpen }) {
+  return (
+    <div>
+      <div className="hero">
+        <div className="cloud c1"></div>
+        <div className="cloud c2"></div>
+        <div className="cloud c3"></div>
+        <div className="sun"></div>
+        <div className="truck-wrap">🚛</div>
+
+        <div className="hero-content">
+          <div className="hero-badge">🛣️ La nuova mobilità su strada italiana</div>
+          <div className="hero-title">Pick Up<span className="pickup-excl">!</span></div>
+          <div className="hero-sub-title">Sali a Bordo. Esplora il Paese.</div>
+          <p className="hero-desc">
+            Prenota un posto su un camion in viaggio verso la tua destinazione.
+            Economico, sostenibile, e un'avventura unica ogni volta.
+          </p>
+          <div className="hero-ctas">
+            <button className="btn btn-white btn-lg" onClick={()=>onNavigate('trips')}>
+              🔍 Cerca Viaggi
+            </button>
+            <button className="btn btn-lg" style={{background:'rgba(255,255,255,0.2)',color:'white',border:'2px solid rgba(255,255,255,0.4)', backdropFilter:'blur(10px)'}} onClick={()=>onLoginOpen('driver-register')}>
+              🚛 Sei un Autista? Registrati
+            </button>
+          </div>
+          <div className="hero-stats">
+            {[{n:'2.4K',l:'Viaggi'},{ n:'180+',l:'Autisti'},{ n:'85',l:'Città'},{ n:'4.8★',l:'Rating'}].map((s,i)=>(
+              <div key={i} className="hero-stat">
+                <div className="hero-stat-num">{s.n}</div>
+                <div className="hero-stat-label">{s.l}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Wave */}
+      <div style={{background:'linear-gradient(to bottom,#8fd4f8,var(--page-bg))', paddingBottom:0}}>
+        <svg viewBox="0 0 1440 80" style={{display:'block',width:'100%'}} preserveAspectRatio="none">
+          <path d="M0,40 C360,80 1080,0 1440,40 L1440,80 L0,80 Z" fill="#f0f8ff"/>
+        </svg>
+      </div>
+
+      {/* HOW */}
+      <div style={{background:'white',borderTop:'1.5px solid var(--border)',borderBottom:'1.5px solid var(--border)'}}>
+        <div className="section" style={{paddingTop:60,paddingBottom:60}}>
+          <div style={{textAlign:'center',marginBottom:40}}>
+            <div className="section-chip">✨ Come Funziona</div>
+            <div className="section-title" style={{marginBottom:0}}>Tre Passi <span className="accent">Semplici</span></div>
+          </div>
+          <div className="grid-3">
+            {[
+              { icon:'🔍', color:'#fff0ee', iconBg:'#ffe4df', title:'Cerca il Tuo Viaggio', desc:'Inserisci la destinazione e la data. Trova camion che percorrono già quel tragitto.' },
+              { icon:'🎫', color:'#f0f8ff', iconBg:'#d0eeff', title:'Prenota il Posto', desc:'Scopri le preferenze dell\'autista, scegli i posti e paga in sicurezza in pochi click.' },
+              { icon:'🚛', color:'#f0fff8', iconBg:'#c8f5e0', title:'Sali a Bordo!', desc:'Incontra l\'autista al punto di partenza e goditi un\'esperienza di viaggio indimenticabile.' },
+            ].map((f,i) => (
+              <div key={i} className="feature-card" style={{background:f.color}}>
+                <div className="feature-icon-wrap" style={{background:f.iconBg}}>{f.icon}</div>
+                <div style={{fontFamily:'Righteous',fontSize:18,color:'var(--ink)',marginBottom:10}}>{f.title}</div>
+                <p style={{fontSize:14,color:'var(--ink-soft)',lineHeight:1.7,fontWeight:500}}>{f.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* TRIPS PREVIEW */}
+      <div className="section">
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-end',marginBottom:0}}>
+          <div>
+            <div className="section-chip">🗺️ In Partenza Presto</div>
+            <div className="section-title" style={{marginBottom:0}}>Viaggi <span className="accent">in Evidenza</span></div>
+          </div>
+          <button className="btn btn-ocean" onClick={()=>onNavigate('trips')}>Vedi Tutti →</button>
+        </div>
+        <div style={{marginTop:32}} className="grid-2">
+          {MOCK_TRIPS.slice(0,4).map(t=>(
+            <TripCard key={t.id} trip={t} onClick={()=>onNavigate('trips')}/>
+          ))}
+        </div>
+      </div>
+
+      {/* WHY */}
+      <div style={{background:'white',borderTop:'1.5px solid var(--border)'}}>
+        <div className="section" style={{paddingTop:60,paddingBottom:60}}>
+          <div style={{textAlign:'center',marginBottom:40}}>
+            <div className="section-chip">❤️ Perché Pick Up!</div>
+            <div className="section-title" style={{marginBottom:0}}>Un Modo Diverso <span className="accent">di Viaggiare</span></div>
+          </div>
+          <div className="grid-2" style={{alignItems:'center',gap:60}}>
+            <div>
+              {[
+                {icon:'💰', c:'var(--coral)', t:'Risparmia fino al 70%', d:'I prezzi sono molto più bassi rispetto a treni e aerei per le stesse tratte.'},
+                {icon:'🌿', c:'var(--mint-dim)', t:'Viaggio Sostenibile', d:'Il camion viaggia comunque. Il tuo posto riduce le emissioni pro capite.'},
+                {icon:'🔒', c:'var(--ocean)', t:'Autisti Verificati', d:'Ogni autista è affiliato a un\'azienda certificata e ha un profilo completo.'},
+                {icon:'🗺️', c:'#a07600', t:'Esperienza Unica', d:'Vivi le strade d\'Italia come non le hai mai vissute. Paesaggi indimenticabili.'},
+              ].map((f,i)=>(
+                <div key={i} style={{display:'flex',gap:16,alignItems:'flex-start',marginBottom:22}}>
+                  <div style={{width:48,height:48,borderRadius:14,background:`${f.c}18`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,flexShrink:0}}>{f.icon}</div>
+                  <div>
+                    <div style={{fontWeight:800,fontSize:15,marginBottom:4,color:'var(--ink)'}}>{f.t}</div>
+                    <div style={{fontSize:14,color:'var(--ink-soft)',lineHeight:1.6}}>{f.d}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div>
+              <MapView from="Milano" to="Roma" height={380}/>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* CTA */}
+      <div style={{background:'linear-gradient(135deg, #1a7fbf 0%, #2ea8e8 50%, #5bb8f5 100%)', padding:'80px 40px',textAlign:'center'}}>
+        <div style={{fontFamily:'Righteous',fontSize:'clamp(36px,5vw,64px)',color:'white',marginBottom:12}}>
+          Pronto a Partire?
+        </div>
+        <p style={{color:'rgba(255,255,255,0.85)',marginBottom:36,fontSize:17,fontWeight:500}}>
+          Unisciti a migliaia di viaggiatori che hanno già scelto Pick Up!
+        </p>
+        <div style={{display:'flex',gap:14,justifyContent:'center',flexWrap:'wrap'}}>
+          <button className="btn btn-white btn-lg" onClick={()=>onLoginOpen('register')}>Registrati Gratis 🎉</button>
+          <button className="btn btn-lg" style={{background:'rgba(255,255,255,0.18)',color:'white',border:'2px solid rgba(255,255,255,0.4)'}} onClick={()=>onNavigate('trips')}>Sfoglia i Viaggi</button>
+        </div>
+      </div>
+
+      <footer style={{background:'var(--ink)',color:'rgba(255,255,255,0.5)',padding:'32px 40px',textAlign:'center'}}>
+        <div style={{fontFamily:'Righteous',fontSize:32,color:'white',marginBottom:6}}>Pick Up<span style={{color:'var(--coral)'}}>!</span></div>
+        <div style={{fontSize:13}}>© 2025 Pick Up! — Tutti i diritti riservati · Made with 🧡 in Italia</div>
+      </footer>
+    </div>
+  );
+}
+
+// ─── TRIPS PAGE ───────────────────────────────────────────────────────────────
+
+function TripsPage({ user, onLoginOpen }) {
+  const [filters, setFilters] = useState({ from:'', to:'', date:'' });
+  const [selTrip, setSelTrip] = useState(null);
+  const [bookTrip, setBookTrip] = useState(null);
+  const [toast, setToast] = useState(null);
+  const [, forceUpdate] = useState(0);
+
+  const upF = k => e => setFilters(f=>({...f,[k]:e.target.value}));
+
+  const filtered = MOCK_TRIPS.filter(t => {
+    if (filters.from && !t.from.toLowerCase().includes(filters.from.toLowerCase())) return false;
+    if (filters.to && !t.to.toLowerCase().includes(filters.to.toLowerCase())) return false;
+    return true;
+  });
+
+  const handleBook = (trip, seats) => {
+    const i = MOCK_TRIPS.findIndex(t=>t.id===trip.id);
+    if (i>=0) MOCK_TRIPS[i].seatsLeft -= seats;
+    MOCK_BOOKINGS.push({ id:Date.now(), userId:user?.id||0, tripId:trip.id, status:'confirmed', seats, total:seats*trip.price, createdAt:new Date() });
+    setBookTrip(null); setSelTrip(null);
+    forceUpdate(n=>n+1);
+    setToast({ msg:'Prenotazione confermata! Buon viaggio 🚛', type:'success' });
+  };
+
+  return (
+    <div style={{paddingTop:68}}>
+      {toast && <Toast {...toast} onClose={()=>setToast(null)}/>}
+      <div style={{background:'linear-gradient(135deg,var(--sky),white)',borderBottom:'1.5px solid var(--border)',padding:'40px 40px 0'}}>
+        <div style={{maxWidth:1200,margin:'0 auto'}}>
+          <div className="page-title">Trova il Tuo <span className="accent">Prossimo Viaggio</span></div>
+          <div className="page-sub">{filtered.length} viaggi disponibili</div>
+        </div>
+      </div>
+
+      <div className="section">
+        <div className="search-bar">
+          <div className="search-field">
+            <label>🏙️ Da</label>
+            <input className="form-input" placeholder="Città di partenza..." value={filters.from} onChange={upF('from')}/>
+          </div>
+          <div className="search-field">
+            <label>📍 A</label>
+            <input className="form-input" placeholder="Destinazione..." value={filters.to} onChange={upF('to')}/>
+          </div>
+          <div className="search-field">
+            <label>📅 Data</label>
+            <input className="form-input" type="date" value={filters.date} onChange={upF('date')}/>
+          </div>
+          <button className="btn btn-primary" style={{paddingLeft:28,paddingRight:28}}>🔍 Cerca</button>
+          <button className="btn btn-ghost" onClick={()=>setFilters({from:'',to:'',date:''})}>Reset</button>
+        </div>
+
+        {filtered.length===0 ? (
+          <div className="empty-state">
+            <span className="empty-icon">🔍</span>
+            <div className="empty-title">Nessun Viaggio Trovato</div>
+            <p className="empty-desc">Prova a modificare i filtri di ricerca.</p>
+          </div>
+        ) : (
+          <div className="grid-2">
+            {filtered.map(t=>(
+              <TripCard key={t.id} trip={t} onClick={()=>setSelTrip(t)}/>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {selTrip && (
+        <TripDetailModal
+          trip={selTrip} user={user}
+          onClose={()=>setSelTrip(null)}
+          onBookOpen={t=>{ setBookTrip(t); setSelTrip(null); }}
+        />
+      )}
+      {bookTrip && user && (
+        <BookingModalFixed
+          trip={bookTrip} user={user}
+          onClose={()=>setBookTrip(null)}
+          onBook={handleBook}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── USER DASHBOARD ───────────────────────────────────────────────────────────
+
+function UserDashboard({ user, onNavigate }) {
+  const [view, setView] = useState('bookings');
+  const myBookings = MOCK_BOOKINGS.filter(b=>b.userId===user.id);
+  const spent = myBookings.reduce((s,b)=>s+b.total,0);
+
+  return (
+    <div className="dashboard-layout">
+      <div className="sidebar">
+        <div style={{padding:'0 12px 20px'}}>
+          <div className="avatar" style={{width:56,height:56,fontSize:18,marginBottom:10}}>{user.avatar}</div>
+          <div style={{fontWeight:800,fontSize:15,color:'var(--ink)'}}>{user.name}</div>
+          <div style={{fontSize:12,color:'var(--ink-faint)',marginTop:3,fontWeight:600}}>{user.email}</div>
+        </div>
+        <div className="divider" style={{margin:'0 12px 12px'}}></div>
+        <div className="sidebar-label">Il Mio Spazio</div>
+        {[
+          {id:'bookings',icon:'🎫',label:'Prenotazioni'},
+          {id:'profile',icon:'👤',label:'Profilo'},
+        ].map(item=>(
+          <div key={item.id} className={`sidebar-item ${view===item.id?'active':''}`} onClick={()=>setView(item.id)}>
+            <div className="s-icon">{item.icon}</div> {item.label}
+          </div>
+        ))}
+        <div className="sidebar-item" onClick={()=>onNavigate('trips')}>
+          <div className="s-icon">🔍</div> Cerca Viaggi
+        </div>
+      </div>
+      <div className="main-content">
+        {view==='bookings' && (
+          <>
+            <div className="page-header">
+              <div className="page-title">Le Mie <span className="accent">Prenotazioni</span></div>
+            </div>
+            <div className="stats-row">
+              <div className="stat-card stat-coral"><div className="stat-card-num" style={{color:'var(--coral)'}}>{myBookings.length}</div><div className="stat-card-label">Prenotazioni Totali</div></div>
+              <div className="stat-card stat-mint"><div className="stat-card-num" style={{color:'var(--mint-dim)'}}>{myBookings.filter(b=>b.status==='confirmed').length}</div><div className="stat-card-label">Confermate</div></div>
+              <div className="stat-card stat-mango"><div className="stat-card-num" style={{color:'#a07600'}}>€{spent}</div><div className="stat-card-label">Spesa Totale</div></div>
+            </div>
+            {myBookings.length===0 ? (
+              <div className="empty-state">
+                <span className="empty-icon">🎫</span>
+                <div className="empty-title">Nessuna Prenotazione</div>
+                <p className="empty-desc">Inizia a esplorare i viaggi disponibili!</p>
+                <button className="btn btn-primary" style={{marginTop:16}} onClick={()=>onNavigate('trips')}>Cerca Viaggi 🗺️</button>
+              </div>
+            ) : (
+              <div className="table-wrap">
+                <table>
+                  <thead><tr><th>Percorso</th><th>Data</th><th>Posti</th><th>Importo</th><th>Stato</th></tr></thead>
+                  <tbody>
+                    {myBookings.map(b=>{
+                      const t=getTrip(b.tripId); if(!t) return null;
+                      return (
+                        <tr key={b.id}>
+                          <td><strong style={{color:'var(--ink)'}}>{t.from} → {t.to}</strong><div style={{fontSize:11,color:'var(--ink-faint)',marginTop:2,fontFamily:'DM Mono'}}>#{b.id}</div></td>
+                          <td>{fmtDate(t.departure)}</td>
+                          <td>{b.seats} posto/i</td>
+                          <td><span className="mono" style={{color:'var(--coral)',fontWeight:700}}>€{b.total}</span></td>
+                          <td><span className="badge badge-green">✓ confermata</span></td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
+        )}
+        {view==='profile' && (
+          <>
+            <div className="page-header"><div className="page-title">Il Mio <span className="accent">Profilo</span></div></div>
+            <div style={{maxWidth:480}}>
+              <div className="card"><div className="card-body">
+                <div className="input-row">
+                  <div className="form-group"><label className="form-label">Nome</label><input className="form-input" defaultValue={user.name.split(' ')[0]}/></div>
+                  <div className="form-group"><label className="form-label">Cognome</label><input className="form-input" defaultValue={user.name.split(' ')[1]||''}/></div>
+                </div>
+                <div className="form-group"><label className="form-label">Email</label><input className="form-input" defaultValue={user.email}/></div>
+                <div className="form-group"><label className="form-label">Telefono</label><input className="form-input" placeholder="+39 333 123 4567"/></div>
+                <button className="btn btn-primary">Salva Modifiche ✓</button>
+              </div></div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── DRIVER DASHBOARD ─────────────────────────────────────────────────────────
+
+function DriverDashboard({ driver }) {
+  const [view, setView] = useState('overview');
+  const [showNew, setShowNew] = useState(false);
+  const [showEditPrefs, setShowEditPrefs] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [, forceUpdate] = useState(0);
+  const company = getCompany(driver.companyId);
+  const myTrips = MOCK_TRIPS.filter(t=>t.driverId===driver.id);
+  const myBookings = myTrips.flatMap(t=>MOCK_BOOKINGS.filter(b=>b.tripId===t.id));
+  const earnings = myBookings.reduce((s,b)=>s+b.total,0);
+
+  const [nt, setNt] = useState({ from:'', to:'', date:'', time:'09:00', seats:4, price:30, notes:'' });
+  const upNt = k => e => setNt(f=>({...f,[k]:e.target.value}));
+
+  // Editable prefs
+  const [driverPrefs, setDriverPrefs] = useState({...driver.prefs});
+  const togglePref = k => setDriverPrefs(p=>({...p,[k]:!p[k]}));
+
+  const createTrip = () => {
+    if (!nt.from||!nt.to||!nt.date) return;
+    const dep = new Date(nt.date+'T'+nt.time);
+    MOCK_TRIPS.push({ id:Date.now(), driverId:driver.id, from:nt.from, to:nt.to, departure:dep, arrival:new Date(dep.getTime()+6*3600000), seats:parseInt(nt.seats), seatsLeft:parseInt(nt.seats), price:parseInt(nt.price), distance:'Da calcolare', notes:nt.notes, status:'active' });
+    setShowNew(false); forceUpdate(n=>n+1);
+    setToast({msg:'Viaggio pubblicato con successo! 🎉',type:'success'});
+  };
+
+  const savePrefs = () => {
+    Object.assign(driver.prefs, driverPrefs);
+    setShowEditPrefs(false);
+    setToast({msg:'Preferenze aggiornate! ✓',type:'success'});
+  };
+
+  return (
+    <div className="dashboard-layout">
+      {toast && <Toast {...toast} onClose={()=>setToast(null)}/>}
+      <div className="sidebar">
+        <div style={{padding:'0 12px 20px'}}>
+          <div className="avatar avatar-driver" style={{width:56,height:56,fontSize:18,marginBottom:10}}>{driver.avatar}</div>
+          <div style={{fontWeight:800,fontSize:15,color:'var(--ink)'}}>{driver.name}</div>
+          <div style={{fontSize:12,color:'var(--ink-faint)',marginTop:2,fontWeight:600}}>{driver.truck}</div>
+          <div className="company-badge" style={{marginTop:8}}>🏢 {company?.name}</div>
+        </div>
+        <div className="divider" style={{margin:'0 12px 12px'}}></div>
+        <div className="sidebar-label">Dashboard</div>
+        {[
+          {id:'overview',icon:'📊',label:'Panoramica'},
+          {id:'trips',icon:'🗺️',label:'I Miei Viaggi'},
+          {id:'bookings',icon:'🎫',label:'Prenotazioni'},
+          {id:'prefs',icon:'⚙️',label:'Preferenze Bordo'},
+          {id:'truck',icon:'🚛',label:'Il Mio Camion'},
+        ].map(item=>(
+          <div key={item.id} className={`sidebar-item ${view===item.id?'active':''}`} onClick={()=>setView(item.id)}>
+            <div className="s-icon">{item.icon}</div>{item.label}
+          </div>
+        ))}
+      </div>
+      <div className="main-content">
+
+        {view==='overview' && (
+          <>
+            <div className="page-header">
+              <div className="page-title">Ciao, <span className="accent">{driver.name.split(' ')[0]}!</span> 👋</div>
+              <div className="page-sub">Ecco il riepilogo della tua attività</div>
+            </div>
+            <div className="stats-row">
+              <div className="stat-card stat-ocean"><div className="stat-card-num" style={{color:'var(--ocean)'}}>{myTrips.length}</div><div className="stat-card-label">Viaggi Pubblicati</div></div>
+              <div className="stat-card stat-mint"><div className="stat-card-num" style={{color:'var(--mint-dim)'}}>{myBookings.length}</div><div className="stat-card-label">Prenotazioni</div></div>
+              <div className="stat-card stat-mango"><div className="stat-card-num" style={{color:'#a07600'}}>€{earnings}</div><div className="stat-card-label">Guadagni</div></div>
+              <div className="stat-card stat-coral"><div className="stat-card-num" style={{color:'var(--coral)'}}>★{driver.rating}</div><div className="stat-card-label">Rating</div></div>
+            </div>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+              <div style={{fontFamily:'Righteous',fontSize:26,color:'var(--ink)'}}>Prossimi Viaggi</div>
+              <button className="btn btn-primary" onClick={()=>setShowNew(true)}>+ Nuovo Viaggio</button>
+            </div>
+            <div className="grid-2">
+              {myTrips.slice(0,4).map(t=>(
+                <div key={t.id} className="card">
+                  <div style={{background:'linear-gradient(135deg,var(--sky),#d0eeff)',padding:'16px 20px'}}>
+                    <div style={{display:'flex',alignItems:'center',gap:8}}>
+                      <div style={{fontFamily:'Righteous',fontSize:20,color:'var(--ink)'}}>{t.from}</div>
+                      <div style={{color:'var(--coral)'}}>→</div>
+                      <div style={{fontFamily:'Righteous',fontSize:20,color:'var(--ink)'}}>{t.to}</div>
+                      <span className="badge badge-green" style={{marginLeft:'auto'}}>Attivo</span>
+                    </div>
+                  </div>
+                  <div className="card-body" style={{paddingTop:14}}>
+                    <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+                      <div className="meta-pill">📅 {fmtDate(t.departure)}</div>
+                      <div className="meta-pill">💺 {t.seatsLeft}/{t.seats}</div>
+                      <div className="meta-pill">💰 €{t.price}/posto</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {myTrips.length===0 && (
+                <div className="empty-state" style={{gridColumn:'1/-1'}}>
+                  <span className="empty-icon">🗺️</span>
+                  <div className="empty-title">Nessun Viaggio</div>
+                  <p className="empty-desc">Crea il tuo primo viaggio!</p>
+                  <button className="btn btn-primary" style={{marginTop:16}} onClick={()=>setShowNew(true)}>+ Crea Viaggio</button>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {view==='trips' && (
+          <>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24}}>
+              <div className="page-title">I Miei <span className="accent">Viaggi</span></div>
+              <button className="btn btn-primary" onClick={()=>setShowNew(true)}>+ Nuovo Viaggio</button>
+            </div>
+            <div className="table-wrap">
+              <table>
+                <thead><tr><th>Rotta</th><th>Data</th><th>Posti</th><th>Prezzo</th><th>Prenotazioni</th><th>Stato</th></tr></thead>
+                <tbody>
+                  {myTrips.map(t=>{
+                    const bk=MOCK_BOOKINGS.filter(b=>b.tripId===t.id);
+                    return (
+                      <tr key={t.id}>
+                        <td><strong style={{color:'var(--ink)'}}>{t.from} → {t.to}</strong></td>
+                        <td>{fmtDate(t.departure)}</td>
+                        <td>{t.seatsLeft}/{t.seats}</td>
+                        <td><span className="mono" style={{color:'var(--coral)',fontWeight:700}}>€{t.price}</span></td>
+                        <td>{bk.length} prenotaz.</td>
+                        <td><span className={`badge ${t.seatsLeft===0?'badge-grey':'badge-green'}`}>{t.seatsLeft===0?'Completo':'Attivo'}</span></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+
+        {view==='bookings' && (
+          <>
+            <div className="page-title" style={{marginBottom:24}}>Prenotazioni <span className="accent">Ricevute</span></div>
+            <div className="table-wrap">
+              <table>
+                <thead><tr><th>ID</th><th>Viaggio</th><th>Posti</th><th>Importo</th><th>Data</th><th>Stato</th></tr></thead>
+                <tbody>
+                  {myBookings.length===0 ? (
+                    <tr><td colSpan={6} style={{textAlign:'center',padding:40,color:'var(--ink-faint)'}}>Nessuna prenotazione ancora</td></tr>
+                  ) : myBookings.map(b=>{
+                    const t=getTrip(b.tripId);
+                    return (
+                      <tr key={b.id}>
+                        <td className="mono" style={{color:'var(--ink-faint)'}}>#{b.id}</td>
+                        <td><strong style={{color:'var(--ink)'}}>{t?.from} → {t?.to}</strong></td>
+                        <td>{b.seats}</td>
+                        <td><span className="mono" style={{color:'var(--coral)',fontWeight:700}}>€{b.total}</span></td>
+                        <td>{fmtDate(b.createdAt)}</td>
+                        <td><span className="badge badge-green">✓ confermata</span></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+
+        {view==='prefs' && (
+          <>
+            <div className="page-header">
+              <div className="page-title">Preferenze <span className="accent">a Bordo</span></div>
+              <div className="page-sub">Queste informazioni vengono mostrate ai passeggeri prima della prenotazione</div>
+            </div>
+            <div style={{maxWidth:640}}>
+              <div className="alert alert-info" style={{marginBottom:20}}>
+                💡 I passeggeri vedranno queste preferenze e dovranno accettarle prima di prenotare il tuo viaggio.
+              </div>
+              <div className="card"><div className="card-body">
+                <div className="prefs-grid">
+                  {DRIVER_PREFS_DEF.map(p=>(
+                    <div
+                      key={p.key}
+                      className={`pref-card ${driverPrefs[p.key]?'selected':'refused'}`}
+                      style={{cursor:'pointer'}}
+                      onClick={()=>togglePref(p.key)}
+                      title={p.desc}
+                    >
+                      <span className="pref-emoji">{p.emoji}</span>
+                      <div className="pref-label" style={{color:driverPrefs[p.key]?'var(--mint-dim)':'var(--coral)'}}>
+                        {driverPrefs[p.key]?'✓':'✗'} {p.label}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="divider"></div>
+                <div style={{display:'flex',gap:12}}>
+                  <button className="btn btn-ghost" onClick={()=>setDriverPrefs({...driver.prefs})}>Annulla</button>
+                  <button className="btn btn-primary" onClick={savePrefs}>Salva Preferenze ✓</button>
+                </div>
+              </div></div>
+            </div>
+          </>
+        )}
+
+        {view==='truck' && (
+          <>
+            <div className="page-title" style={{marginBottom:24}}>Il Mio <span className="accent">Camion</span></div>
+            <div style={{maxWidth:500}}>
+              <div className="card"><div className="card-body">
+                <div style={{textAlign:'center',padding:'20px 0',borderBottom:'1.5px solid var(--sky)',marginBottom:20}}>
+                  <div style={{fontSize:80}}>🚛</div>
+                  <div style={{fontFamily:'Righteous',fontSize:26,marginTop:8,color:'var(--ink)'}}>{driver.truck}</div>
+                  <div className="mono" style={{color:'var(--ocean)',fontSize:16,marginTop:4}}>{driver.plate}</div>
+                </div>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+                  {[{l:'Azienda',v:company?.name},{l:'Esperienza',v:`${driver.experience} anni`},{l:'Rating',v:`★ ${driver.rating}`},{l:'Viaggi',v:myTrips.length}].map((r,i)=>(
+                    <div key={i} style={{background:'var(--sky)',borderRadius:12,padding:'12px 14px'}}>
+                      <div style={{fontSize:10,fontWeight:800,letterSpacing:1,textTransform:'uppercase',color:'var(--ink-faint)',marginBottom:4}}>{r.l}</div>
+                      <div style={{fontWeight:700,color:'var(--ink)'}}>{r.v}</div>
+                    </div>
+                  ))}
+                </div>
+              </div></div>
+            </div>
+          </>
+        )}
+
+      </div>
+
+      {/* NEW TRIP MODAL */}
+      {showNew && (
+        <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setShowNew(false)}>
+          <div className="modal modal-lg">
+            <div className="modal-header">
+              <div className="modal-title">🗺️ Crea Nuovo Viaggio</div>
+              <button className="modal-close" onClick={()=>setShowNew(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="input-row">
+                <div className="form-group"><label className="form-label">Partenza</label>
+                  <select className="form-select" value={nt.from} onChange={upNt('from')}>
+                    <option value="">Seleziona...</option>{CITIES.map(c=><option key={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div className="form-group"><label className="form-label">Destinazione</label>
+                  <select className="form-select" value={nt.to} onChange={upNt('to')}>
+                    <option value="">Seleziona...</option>{CITIES.map(c=><option key={c}>{c}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="input-row">
+                <div className="form-group"><label className="form-label">Data Partenza</label><input className="form-input" type="date" value={nt.date} onChange={upNt('date')} min={new Date().toISOString().split('T')[0]}/></div>
+                <div className="form-group"><label className="form-label">Orario</label><input className="form-input" type="time" value={nt.time} onChange={upNt('time')}/></div>
+              </div>
+              <div className="input-row">
+                <div className="form-group"><label className="form-label">Posti Disponibili</label>
+                  <select className="form-select" value={nt.seats} onChange={upNt('seats')}>
+                    {[1,2,3,4,5,6].map(n=><option key={n} value={n}>{n} posto/i</option>)}
+                  </select>
+                </div>
+                <div className="form-group"><label className="form-label">Prezzo per Posto (€)</label><input className="form-input" type="number" min="5" max="200" value={nt.price} onChange={upNt('price')}/></div>
+              </div>
+              <div className="form-group"><label className="form-label">Note per i Passeggeri</label><textarea className="form-textarea" placeholder="Es: sosta Bologna, animali ammessi..." value={nt.notes} onChange={upNt('notes')}/></div>
+              {nt.from && nt.to && <div style={{marginBottom:16}}><MapView from={nt.from} to={nt.to} height={180}/></div>}
+              <div style={{display:'flex',justifyContent:'flex-end',gap:12}}>
+                <button className="btn btn-ghost" onClick={()=>setShowNew(false)}>Annulla</button>
+                <button className="btn btn-primary btn-lg" onClick={createTrip}>Pubblica Viaggio 🚀</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── APP ──────────────────────────────────────────────────────────────────────
+
+function App() {
+  const [page, setPage] = useState('home');
+  const [user, setUser] = useState(null);
+  const [driver, setDriver] = useState(null);
+  const [authModal, setAuthModal] = useState(null);
+  const [toast, setToast] = useState(null);
+
+  const handleLogin = (u, d) => {
+    setUser(u); setDriver(d);
+    setToast({ msg:`Benvenuto${d?' autista':''}, ${(u||d).name.split(' ')[0]}! 🎉`, type:'success' });
+    if (d) setPage('driver-dash');
+    else if (u) setPage('user-dash');
+  };
+
+  const handleLogout = () => {
+    setUser(null); setDriver(null); setPage('home');
+    setToast({ msg:'Arrivederci! A presto 👋', type:'success' });
+  };
+
+  return (
+    <div>
+      {toast && <Toast {...toast} onClose={()=>setToast(null)}/>}
+      <Nav user={user} driver={driver} onLoginOpen={m=>setAuthModal(m)} onLogout={handleLogout} onNavigate={setPage} currentPage={page}/>
+      {page==='home' && <HomePage onNavigate={setPage} onLoginOpen={m=>setAuthModal(m)}/>}
+      {page==='trips' && <TripsPage user={user} onLoginOpen={m=>setAuthModal(m)}/>}
+      {page==='user-dash' && user && <UserDashboard user={user} onNavigate={setPage}/>}
+      {page==='driver-dash' && driver && <DriverDashboard driver={driver}/>}
+      {page==='user-dash' && !user && (
+        <div style={{paddingTop:120,textAlign:'center'}}>
+          <div style={{fontSize:64,marginBottom:16}}>🔒</div>
+          <div style={{fontFamily:'Righteous',fontSize:36,marginBottom:16,color:'var(--ink)'}}>Accesso Richiesto</div>
+          <button className="btn btn-primary btn-lg" onClick={()=>setAuthModal('login')}>Accedi →</button>
+        </div>
+      )}
+      {authModal && <AuthModal mode={authModal} onClose={()=>setAuthModal(null)} onLogin={handleLogin}/>}
+    </div>
+  );
+}
+
+ReactDOM.render(<App/>, document.getElementById('root'));
+</script>
+</body>
+</html>
