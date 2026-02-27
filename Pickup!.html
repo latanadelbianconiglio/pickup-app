@@ -7,6 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Righteous&family=Nunito:wght@400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -959,6 +960,183 @@
     margin-bottom:16px;
   }
 
+  /* CITY AUTOCOMPLETE */
+  .city-autocomplete { position: relative; }
+
+  .city-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .city-input-flag {
+    position: absolute;
+    left: 12px;
+    font-size: 18px;
+    pointer-events: none;
+    z-index: 1;
+    line-height: 1;
+  }
+
+  .city-input-wrap .form-input { padding-left: 40px; }
+  .city-input-wrap .form-input.no-flag { padding-left: 14px; }
+
+  .city-clear {
+    position: absolute;
+    right: 10px;
+    background: var(--sky-mid);
+    border: none;
+    border-radius: 50%;
+    width: 20px; height: 20px;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink-soft);
+    transition: all 0.15s;
+    z-index: 2;
+  }
+  .city-clear:hover { background: var(--border-mid); }
+
+  .city-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0; right: 0;
+    background: white;
+    border: 1.5px solid var(--border-mid);
+    border-radius: 14px;
+    box-shadow: 0 8px 32px rgba(26,127,191,0.18);
+    z-index: 9999;
+    max-height: 300px;
+    overflow-y: auto;
+    animation: slideUp 0.15s ease;
+  }
+
+  .city-dropdown::-webkit-scrollbar { width: 4px; }
+  .city-dropdown::-webkit-scrollbar-thumb { background: var(--sky-mid); border-radius: 2px; }
+
+  .city-dropdown-group-header {
+    padding: 8px 14px 4px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    background: var(--sky);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+
+  .city-dropdown-item {
+    padding: 9px 14px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.1s;
+    border-bottom: 1px solid var(--sky);
+  }
+
+  .city-dropdown-item:last-child { border-bottom: none; }
+  .city-dropdown-item:hover { background: var(--sky); }
+  .city-dropdown-item.highlighted { background: rgba(91,184,245,0.12); }
+
+  .city-dropdown-item .city-country { font-size: 11px; color: var(--ink-faint); margin-left: auto; font-weight: 600; }
+
+  .city-no-results {
+    padding: 20px;
+    text-align: center;
+    color: var(--ink-faint);
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .city-loading {
+    padding: 16px;
+    text-align: center;
+    color: var(--ink-faint);
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  /* PHOTO UPLOAD */
+  .photo-upload-zone {
+    border: 2.5px dashed var(--border-mid);
+    border-radius: 16px;
+    padding: 28px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--sky);
+    position: relative;
+  }
+
+  .photo-upload-zone:hover {
+    border-color: var(--sky-deep);
+    background: rgba(91,184,245,0.06);
+  }
+
+  .photo-upload-zone.has-photo {
+    border-color: var(--mint);
+    background: rgba(61,203,142,0.05);
+    padding: 16px;
+  }
+
+  .photo-upload-zone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+
+  .photo-preview {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid white;
+    box-shadow: 0 4px 16px rgba(61,203,142,0.3);
+    margin: 0 auto 12px;
+    display: block;
+  }
+
+  .photo-change-btn {
+    position: absolute;
+    bottom: 12px;
+    right: 50%;
+    transform: translateX(60px);
+    background: var(--ocean);
+    color: white;
+    border: 2px solid white;
+    border-radius: 50%;
+    width: 28px; height: 28px;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    transition: all 0.15s;
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  /* NAV DRIVER PHOTO */
+  .nav-driver-photo {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(255,107,74,0.4);
+    flex-shrink: 0;
+  }
+
   /* RESPONSIVE */
   @media (max-width:768px) {
     nav { padding:0 20px; }
@@ -970,6 +1148,7 @@
     .input-row { grid-template-columns:1fr; }
     .hero-stats { gap:12px; }
     .hero-stat { padding:12px 18px; }
+    .city-dropdown { max-height: 240px; }
   }
 </style>
 </head>
@@ -977,80 +1156,646 @@
 <div id="root"></div>
 <script type="text/babel">
 
-const { useState, useEffect } = React;
+const { useState, useEffect, useRef } = React;
+
+// ─── SUPABASE CLIENT ─────────────────────────────────────────────────────────
+// ⚠️  SOSTITUISCI i due valori qui sotto con quelli del tuo progetto Supabase
+//    Li trovi su: supabase.com → tuo progetto → Settings → API
+const SUPABASE_URL = 'https://zopxjzmjflikvecsquth.supabase.co';   // es. https://xyzxyz.supabase.co
+const SUPABASE_KEY = 'sb_publishable_55eeveBo1uSPhvlxCxvY9A_N7lDTwIU';       // chiave pubblica (anon/public)
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/*
+════════════════════════════════════════════════════════════════
+  📋 SQL DA ESEGUIRE SU SUPABASE (una volta sola)
+  
+  Vai su: supabase.com → tuo progetto → SQL Editor → New Query
+  Incolla tutto il codice qui sotto e clicca "Run"
+════════════════════════════════════════════════════════════════
+
+-- 1. TABELLA AZIENDE
+create table companies (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  city text not null,
+  created_at timestamptz default now()
+);
+
+-- 2. TABELLA AUTISTI (collegata a Supabase Auth)
+create table drivers (
+  id uuid primary key default gen_random_uuid(),
+  auth_id uuid references auth.users(id) on delete cascade,
+  name text not null,
+  email text not null unique,
+  company_id uuid references companies(id),
+  truck text not null,
+  plate text not null,
+  experience int default 1,
+  rating numeric(3,2) default 5.0,
+  photo_url text,
+  bio text,
+  prefs jsonb default '{}',
+  created_at timestamptz default now()
+);
+
+-- 3. TABELLA PASSEGGERI (collegata a Supabase Auth)
+create table users (
+  id uuid primary key references auth.users(id) on delete cascade,
+  name text not null,
+  email text not null unique,
+  created_at timestamptz default now()
+);
+
+-- 4. TABELLA VIAGGI
+create table trips (
+  id uuid primary key default gen_random_uuid(),
+  driver_id uuid references drivers(id) on delete cascade,
+  from_city text not null,
+  to_city text not null,
+  departure timestamptz not null,
+  arrival timestamptz,
+  seats int not null default 1,
+  seats_left int not null default 1,
+  price numeric(8,2) not null,
+  notes text,
+  status text default 'active' check (status in ('active','full','cancelled','completed')),
+  created_at timestamptz default now()
+);
+create index on trips(status, departure);
+create index on trips(from_city, to_city);
+
+-- 5. TABELLA PRENOTAZIONI
+create table bookings (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references users(id) on delete cascade,
+  trip_id uuid references trips(id) on delete cascade,
+  seats int not null default 1,
+  total numeric(8,2) not null,
+  status text default 'confirmed' check (status in ('confirmed','cancelled','refunded')),
+  created_at timestamptz default now()
+);
+create index on bookings(user_id);
+create index on bookings(trip_id);
+
+-- 6. SICUREZZA: abilita Row Level Security (RLS)
+alter table companies  enable row level security;
+alter table drivers    enable row level security;
+alter table users      enable row level security;
+alter table trips      enable row level security;
+alter table bookings   enable row level security;
+
+-- 7. POLICY: chiunque può leggere viaggi e aziende
+create policy "Viaggi pubblici" on trips for select using (true);
+create policy "Aziende pubbliche" on companies for select using (true);
+create policy "Autisti pubblici" on drivers for select using (true);
+
+-- 8. POLICY: autisti possono inserire/modificare i propri viaggi
+create policy "Autista gestisce propri viaggi" on trips
+  for all using (driver_id in (select id from drivers where auth_id = auth.uid()));
+
+-- 9. POLICY: utenti vedono solo le proprie prenotazioni
+create policy "Utente vede proprie prenotazioni" on bookings
+  for select using (user_id = auth.uid());
+
+create policy "Utente crea prenotazioni" on bookings
+  for insert with check (user_id = auth.uid());
+
+-- 10. POLICY: utenti gestiscono il proprio profilo
+create policy "Utente gestisce profilo" on users
+  for all using (id = auth.uid());
+
+create policy "Autista gestisce profilo" on drivers
+  for all using (auth_id = auth.uid());
+
+-- 11. POLICY: tutti possono inserire aziende (nuove aziende da registrazione)
+create policy "Inserisci azienda" on companies
+  for insert with check (true);
+
+════════════════════════════════════════════════════════════════
+*/
+
+
+
+// ─── CITY AUTOCOMPLETE ────────────────────────────────────────────────────────
+
+function CityAutocomplete({ value, onChange, placeholder, label, id }) {
+  const [query, setQuery]         = useState(value || '');
+  const [results, setResults]     = useState([]);
+  const [open, setOpen]           = useState(false);
+  const [highlighted, setHighlighted] = useState(-1);
+  const [selFlag, setSelFlag]     = useState('');
+  const wrapRef  = useRef(null);
+  const inputRef = useRef(null);
+
+  // Aggiorna risultati ogni volta che query cambia (senza blocchi inutili)
+  useEffect(() => {
+    if (!query || query.trim().length < 1) { setResults([]); return; }
+    setResults(searchCities(query));
+  }, [query]);
+
+  // Sync value esterno (es. reset filtri)
+  useEffect(() => {
+    setQuery(value || '');
+    if (!value) setSelFlag('');
+  }, [value]);
+
+  // Chiudi cliccando fuori
+  useEffect(() => {
+    const h = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+
+  const select = (item) => {
+    setQuery(item.name);
+    setSelFlag(item.flag);
+    onChange(item.name);
+    setOpen(false);
+    setResults([]);
+    setHighlighted(-1);
+  };
+
+  const handleChange = (e) => {
+    const v = e.target.value;
+    setQuery(v);
+    setSelFlag('');
+    if (!v) onChange('');
+    setOpen(true);
+    setHighlighted(-1);
+  };
+
+  const handleKey = (e) => {
+    if (!open || !results.length) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); setHighlighted(h => Math.min(h + 1, results.length - 1)); }
+    if (e.key === 'ArrowUp')   { e.preventDefault(); setHighlighted(h => Math.max(h - 1, 0)); }
+    if (e.key === 'Enter' && highlighted >= 0) select(results[highlighted]);
+    if (e.key === 'Escape') setOpen(false);
+  };
+
+  const clear = () => {
+    setQuery(''); setSelFlag(''); onChange(''); setResults([]);
+    inputRef.current?.focus();
+  };
+
+  // Calcola i risultati correnti in modo sincrono per evitare flash "nessun risultato"
+  const liveResults = query.trim().length >= 1 ? (results.length > 0 ? results : searchCities(query)) : [];
+
+  return (
+    <div className="city-autocomplete" ref={wrapRef}>
+      {label && <label className="form-label" htmlFor={id}>{label}</label>}
+      <div className="city-input-wrap">
+        {selFlag && <span className="city-input-flag">{selFlag}</span>}
+        <input
+          id={id}
+          ref={inputRef}
+          className={`form-input ${selFlag ? '' : 'no-flag'}`}
+          placeholder={placeholder || 'Cerca città europea...'}
+          value={query}
+          onChange={handleChange}
+          onFocus={() => { if (query.length >= 1) setOpen(true); }}
+          onKeyDown={handleKey}
+          autoComplete="off"
+        />
+        {query && <button className="city-clear" onClick={clear}>×</button>}
+      </div>
+
+      {open && query.trim().length >= 1 && (
+        <div className="city-dropdown">
+          {liveResults.length === 0 ? (
+            <div className="city-no-results">🔍 Nessun risultato per "<strong>{query}</strong>"</div>
+          ) : (
+            liveResults.map((item, i) => (
+              <div
+                key={`${item.name}-${i}`}
+                className={`city-dropdown-item ${highlighted === i ? 'highlighted' : ''}`}
+                onMouseDown={() => select(item)}
+                onMouseEnter={() => setHighlighted(i)}
+              >
+                <span style={{fontSize:20,lineHeight:1}}>{item.flag}</span>
+                <span style={{fontWeight:700,flex:1}}>{item.name}</span>
+                <span className="city-country">{item.country}</span>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── PHOTO UPLOAD ─────────────────────────────────────────────────────────────
+
+function PhotoUpload({ value, onChange, label = 'Foto Profilo', hint = 'JPG, PNG fino a 5MB' }) {
+  const fileRef = useRef(null);
+  const [preview, setPreview] = useState(value || null);
+  const [dragging, setDragging] = useState(false);
+
+  const processFile = (file) => {
+    if (!file || !file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target.result;
+      setPreview(dataUrl);
+      onChange(dataUrl);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleFile = (e) => processFile(e.target.files[0]);
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setDragging(false);
+    processFile(e.dataTransfer.files[0]);
+  };
+
+  const remove = (e) => {
+    e.stopPropagation();
+    setPreview(null);
+    onChange(null);
+    if (fileRef.current) fileRef.current.value = '';
+  };
+
+  return (
+    <div className="form-group">
+      {label && <label className="form-label">{label}</label>}
+      <div
+        className={`photo-upload-zone ${preview ? 'has-photo' : ''} ${dragging ? 'dragging' : ''}`}
+        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={handleDrop}
+        onClick={() => !preview && fileRef.current?.click()}
+        style={{ cursor: preview ? 'default' : 'pointer' }}
+      >
+        <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} style={{display:'none'}}/>
+        {preview ? (
+          <>
+            <img src={preview} alt="Foto profilo" className="photo-preview"/>
+            <div style={{fontSize:13,fontWeight:700,color:'var(--mint-dim)',marginBottom:8}}>✓ Foto caricata!</div>
+            <div style={{display:'flex',gap:8,justifyContent:'center'}}>
+              <button className="btn btn-ghost btn-sm" onClick={(e)=>{e.stopPropagation();fileRef.current?.click();}}>
+                📷 Cambia foto
+              </button>
+              <button className="btn btn-sm" style={{background:'rgba(255,107,74,0.1)',color:'var(--coral)',border:'1px solid rgba(255,107,74,0.2)'}} onClick={remove}>
+                🗑️ Rimuovi
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{fontSize:48,marginBottom:12}}>📷</div>
+            <div style={{fontWeight:800,fontSize:14,color:'var(--ink)',marginBottom:6}}>
+              {dragging ? 'Rilascia qui la foto!' : 'Carica una foto profilo'}
+            </div>
+            <div style={{fontSize:12,color:'var(--ink-faint)',marginBottom:16}}>{hint}</div>
+            <button className="btn btn-ocean btn-sm" onClick={(e)=>{e.stopPropagation();fileRef.current?.click();}}>
+              📂 Scegli file
+            </button>
+            <div style={{fontSize:11,color:'var(--ink-faint)',marginTop:10}}>oppure trascina l'immagine qui</div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
 
 // ─── DATA ─────────────────────────────────────────────────────────────────────
 
-const CITIES = ["Milano","Roma","Napoli","Torino","Bologna","Firenze","Venezia","Bari","Palermo","Genova","Trieste","Verona","Brescia","Padova","Modena","Reggio Calabria","Catania","Messina","Perugia","Ancona"];
+// ── Destinazioni europee organizzate per paese ──
+const EU_LOCATIONS = {
+  "🇮🇹 Italia": [
+    "Agrigento","Alessandria","Ancona","Aosta","Arezzo","Ascoli Piceno","Asti","Avellino",
+    "Bari","Barletta","Belluno","Benevento","Bergamo","Biella","Bologna","Bolzano","Brescia",
+    "Brindisi","Cagliari","Caltanissetta","Campobasso","Carrara","Caserta","Catania","Catanzaro",
+    "Chieti","Como","Cosenza","Cremona","Crotone","Cuneo","Enna","Ferrara","Firenze","Foggia",
+    "Forlì","Frosinone","Genova","Gorizia","Grosseto","Imperia","Isernia","L'Aquila","La Spezia",
+    "Latina","Lecce","Lecco","Livorno","Lodi","Lucca","Macerata","Mantova","Massa","Matera",
+    "Messina","Milano","Modena","Monza","Napoli","Novara","Nuoro","Oristano","Padova","Palermo",
+    "Parma","Pavia","Perugia","Pesaro","Pescara","Piacenza","Pisa","Pistoia","Pordenone","Potenza",
+    "Prato","Ragusa","Ravenna","Reggio Calabria","Reggio Emilia","Rieti","Rimini","Roma",
+    "Rovigo","Salerno","Sassari","Savona","Siena","Siracusa","Sondrio","Taranto","Teramo",
+    "Terni","Torino","Trapani","Trento","Treviso","Trieste","Udine","Varese","Venezia","Verbania",
+    "Vercelli","Verona","Vibo Valentia","Vicenza","Viterbo"
+  ],
+  "🇩🇪 Germania": [
+    "Berlino","Monaco","Amburgo","Colonia","Francoforte","Stoccarda","Düsseldorf","Dortmund",
+    "Essen","Lipsia","Brema","Hannover","Dresda","Norimberga","Duisburg","Bochum","Wuppertal",
+    "Bielefeld","Mannheim","Bonn","Karlsruhe","Münster","Wiesbaden","Augsburg","Gelsenkirchen",
+    "Mönchengladbach","Braunschweig","Kiel","Aachen","Chemnitz","Magdeburgo","Halle","Freiburg",
+    "Krefeld","Lubecca","Oberhausen","Erfurt","Magonza","Rostock","Kassel","Saarbrücken"
+  ],
+  "🇫🇷 Francia": [
+    "Parigi","Marsiglia","Lione","Tolosa","Nizza","Nantes","Strasburgo","Montpellier","Bordeaux",
+    "Lilla","Rennes","Reims","Saint-Étienne","Toulon","Le Havre","Grenoble","Dijon","Angers",
+    "Nîmes","Villeurbanne","Clermont-Ferrand","Aix-en-Provence","Brest","Tours","Amiens",
+    "Limoges","Perpignan","Metz","Besançon","Orléans","Mulhouse","Caen","Boulogne-Billancourt",
+    "Nancy","Argenteuil","Rouen","Montreuil","Fort-de-France","Avignon","Poitiers","Calais"
+  ],
+  "🇪🇸 Spagna": [
+    "Madrid","Barcellona","Valencia","Siviglia","Saragozza","Malaga","Murcia","Palma","Las Palmas",
+    "Bilbao","Alicante","Córdoba","Valladolid","Vigo","Gijón","L'Hospitalet","A Coruña","Vitoria",
+    "Granada","Elche","Oviedo","Badalona","Cartagena","Terrassa","Jerez","Sabadell","Santa Cruz",
+    "Pamplona","Almería","Leganés","San Sebastián","Fuenlabrada","Burgos","Santander","Castellón",
+    "Getafe","Alcalá de Henares","Toledo","Logroño","Marbella","Lleida","Tarragona","León","Cádiz"
+  ],
+  "🇵🇹 Portogallo": [
+    "Lisbona","Porto","Braga","Coimbra","Funchal","Aveiro","Setúbal","Évora","Faro","Viseu",
+    "Viana do Castelo","Beja","Guarda","Castelo Branco","Leiria","Santarém","Portimão","Albufeira"
+  ],
+  "🇧🇪 Belgio": [
+    "Bruxelles","Anversa","Gand","Charleroi","Liegi","Bruges","Namur","Lovanio","Mons","Aalst",
+    "La Louvière","Mechelen","Kortrijk","Hasselt","Ostenda","Sint-Niklaas","Tournai","Genk"
+  ],
+  "🇳🇱 Olanda": [
+    "Amsterdam","Rotterdam","L'Aia","Utrecht","Eindhoven","Groningen","Tilburg","Almere","Breda",
+    "Nijmegen","Enschede","Apeldoorn","Haarlem","Arnhem","Zaanstad","Amersfoort","Dordrecht",
+    "Leiden","Maastricht","Zwolle","Delft","Deventer","Alkmaar","Den Bosch","Venlo"
+  ],
+  "🇦🇹 Austria": [
+    "Vienna","Graz","Linz","Salisburgo","Innsbruck","Klagenfurt","Villach","Wels","Sankt Pölten",
+    "Dornbirn","Steyr","Wiener Neustadt","Feldkirch","Bregenz","Leonding","Klosterneuburg","Leoben"
+  ],
+  "🇨🇭 Svizzera": [
+    "Zurigo","Ginevra","Basilea","Berna","Losanna","Winterthur","Lucerna","Sankt Gallen","Lugano",
+    "Biel","Thun","Köniz","La Chaux-de-Fonds","Schaffhausen","Friburgo","Vernier","Chur","Neuchâtel"
+  ],
+  "🇵🇱 Polonia": [
+    "Varsavia","Cracovia","Łódź","Breslavia","Poznań","Danzica","Szczecin","Bydgoszcz","Lublino",
+    "Katowice","Białystok","Gdynia","Częstochowa","Radom","Sosnowiec","Toruń","Kielce","Rzeszów",
+    "Gliwice","Zabrze","Bytom","Olsztyn","Bielsko-Biała","Ruda Śląska","Rybnik","Opole","Elbląg"
+  ],
+  "🇨🇿 Rep. Ceca": [
+    "Praga","Brno","Ostrava","Plzeň","Liberec","Olomouc","Ústí nad Labem","Hradec Králové",
+    "České Budějovice","Pardubice","Zlín","Haviřov","Kladno","Most","Opava","Frýdek-Místek"
+  ],
+  "🇸🇰 Slovacchia": [
+    "Bratislava","Košice","Prešov","Žilina","Banská Bystrica","Nitra","Trnava","Martin","Trenčín","Poprad"
+  ],
+  "🇭🇺 Ungheria": [
+    "Budapest","Debrecen","Miskolc","Szeged","Pécs","Győr","Nyíregyháza","Kecskemét","Székesfehérvár",
+    "Szombathely","Szolnok","Tatabánya","Érd","Kaposvár","Eger","Sopron","Veszprém"
+  ],
+  "🇷🇴 Romania": [
+    "Bucarest","Cluj-Napoca","Timișoara","Iași","Constanța","Craiova","Brașov","Galați","Ploiești",
+    "Oradea","Brăila","Arad","Pitești","Sibiu","Bacău","Târgu Mureș","Baia Mare","Buzău","Satu Mare"
+  ],
+  "🇧🇬 Bulgaria": [
+    "Sofia","Plovdiv","Varna","Burgas","Ruse","Stara Zagora","Pleven","Sliven","Dobrich","Shumen"
+  ],
+  "🇬🇷 Grecia": [
+    "Atene","Salonicco","Patrasso","Iraklion","Larissa","Volos","Ioannina","Trikala","Calcide","Serres",
+    "Katerini","Kavala","Drama","Corinto","Rodi","Corfù","Veroia","Alessandroupoli"
+  ],
+  "🇸🇮 Slovenia": [
+    "Lubiana","Maribor","Celje","Kranj","Velenje","Koper","Novo Mesto","Ptuj","Nova Gorica","Murska Sobota"
+  ],
+  "🇭🇷 Croazia": [
+    "Zagabria","Spalato","Rijeka","Osijek","Zadar","Slavonski Brod","Pola","Karlovac","Varaždin","Šibenik"
+  ],
+  "🇷🇸 Serbia": [
+    "Belgrado","Novi Sad","Niš","Kragujevac","Subotica","Zrenjanin","Pančevo","Čačak","Novi Pazar"
+  ],
+  "🇸🇪 Svezia": [
+    "Stoccolma","Göteborg","Malmö","Uppsala","Västerås","Örebro","Linköping","Helsingborg","Jönköping",
+    "Norrköping","Lund","Umeå","Gävle","Borås","Södertälje","Eskilstuna","Halmstad","Växjö","Karlstad"
+  ],
+  "🇩🇰 Danimarca": [
+    "Copenaghen","Aarhus","Odense","Aalborg","Esbjerg","Randers","Kolding","Horsens","Vejle","Roskilde",
+    "Herning","Silkeborg","Næstved","Fredericia","Viborg","Køge","Holstebro","Slagelse"
+  ],
+  "🇫🇮 Finlandia": [
+    "Helsinki","Espoo","Tampere","Vantaa","Oulu","Turku","Jyväskylä","Lahti","Kuopio","Kouvola",
+    "Pori","Joensuu","Lappeenranta","Hämeenlinna","Vaasa","Rovaniemi","Seinäjoki","Mikkeli"
+  ],
+  "🇳🇴 Norvegia": [
+    "Oslo","Bergen","Stavanger","Trondheim","Drammen","Fredrikstad","Kristiansand","Sandnes",
+    "Tromsø","Sarpsborg","Skien","Ålesund","Sandefjord","Haugesund","Tønsberg","Moss","Bodø"
+  ],
+  "🇱🇺 Lussemburgo": ["Lussemburgo Città","Esch-sur-Alzette","Differdange","Dudelange","Ettelbruck"],
+  "🇮🇪 Irlanda": [
+    "Dublino","Cork","Limerick","Galway","Waterford","Drogheda","Dundalk","Swords","Bray","Navan"
+  ],
+};
+
+// Lista piatta di tutte le città per dropdown
+const ALL_EU_CITIES = Object.entries(EU_LOCATIONS).flatMap(([country, cities]) =>
+  cities.map(c => ({ city: c, country }))
+);
+
+// ── Ricerca locale smart: normalizza accenti, cerca inizio e sottostringa ──
+const normalize = (s) =>
+  s.toLowerCase()
+   .normalize('NFD')
+   .replace(/[\u0300-\u036f]/g, '');  // è→e, ü→u, ç→c, ą→a …
+
+const searchCities = (q) => {
+  if (!q || q.trim().length < 1) return [];
+  const nq = normalize(q.trim());
+  const startsWith = [];
+  const contains   = [];
+  for (const { city, country } of ALL_EU_CITIES) {
+    const nc = normalize(city);
+    if (nc === nq)           { startsWith.unshift({ city, country }); continue; }
+    if (nc.startsWith(nq))   { startsWith.push({ city, country }); continue; }
+    if (nc.includes(nq))     { contains.push({ city, country }); }
+  }
+  return [...startsWith, ...contains].slice(0, 10).map(({ city, country }) => ({
+    name:    city,
+    flag:    country.split(' ')[0],
+    country: country.replace(/^\S+\s/, ''),
+  }));
+};
+
+// Helper per trovare paese dalla città
+const getCityCountry = (cityName) => {
+  const found = ALL_EU_CITIES.find(c => c.city === cityName);
+  return found ? found.country.split(' ')[1] : '';
+};
 
 // Driver preferences definition
 const DRIVER_PREFS_DEF = [
-  { key:'music',    emoji:'🎵', label:'Musica OK',       desc:'L\'autista ascolta musica durante il viaggio' },
-  { key:'talking',  emoji:'💬', label:'Chiacchiere',     desc:'Ama conversare con i passeggeri' },
-  { key:'smoking',  emoji:'🚬', label:'Non fumatore',    desc:'Vietato fumare sul camion' },
-  { key:'pets',     emoji:'🐾', label:'Animali OK',      desc:'Accetta piccoli animali domestici' },
-  { key:'food',     emoji:'🍕', label:'Cibo Consentito', desc:'Puoi mangiare a bordo' },
-  { key:'stops',    emoji:'⛽', label:'Soste Frequenti', desc:'Pause regolari ogni 2h' },
-  { key:'ac',       emoji:'❄️',  label:'Aria Condizionata',desc:'Camion con AC funzionante' },
-  { key:'quiet',    emoji:'🤫', label:'Viaggio Silenzioso',desc:'Preferisce silenzio e relax' },
+  { key:'music',    emoji:'🎵', label:'Musica OK',          desc:'L\'autista ascolta musica durante il viaggio' },
+  { key:'talking',  emoji:'💬', label:'Chiacchiere',        desc:'Ama conversare con i passeggeri' },
+  { key:'smoking',  emoji:'🚬', label:'Non fumatore',       desc:'Vietato fumare sul camion' },
+  { key:'pets',     emoji:'🐾', label:'Animali OK',         desc:'Accetta piccoli animali domestici' },
+  { key:'food',     emoji:'🍕', label:'Cibo Consentito',    desc:'Puoi mangiare a bordo' },
+  { key:'stops',    emoji:'⛽', label:'Soste Frequenti',    desc:'Pause regolari ogni 2h' },
+  { key:'ac',       emoji:'❄️', label:'Aria Condizionata',  desc:'Camion con AC funzionante' },
+  { key:'quiet',    emoji:'🤫', label:'Viaggio Silenzioso', desc:'Preferisce silenzio e relax' },
 ];
 
-const MOCK_COMPANIES = [
-  { id:1, name:"LogiTrans Italia", city:"Milano", trucks:8, drivers:6, logo:"🏢" },
-  { id:2, name:"SpeedCargo Sud", city:"Napoli", trucks:12, drivers:10, logo:"🏭" },
-  { id:3, name:"NordTrasporti", city:"Torino", trucks:5, drivers:4, logo:"🏗️" },
-];
-
-const MOCK_DRIVERS = [
-  {
-    id:1, name:"Marco Ferretti", email:"marco@logitrans.it", password:"pass123",
-    companyId:1, truck:"Volvo FH 2022", plate:"MI 482 KT", experience:12, rating:4.9, avatar:"MF",
-    bio:"Autista professionista dal 2012. Appassionato di musica e buona cucina. Ogni viaggio è un'avventura!",
-    prefs:{ music:true, talking:true, smoking:false, pets:true, food:true, stops:true, ac:true, quiet:false }
-  },
-  {
-    id:2, name:"Giuseppe Rana", email:"giuseppe@speedcargo.it", password:"pass123",
-    companyId:2, truck:"Scania R450", plate:"NA 219 PL", experience:8, rating:4.7, avatar:"GR",
-    bio:"Amo le lunghe tratte, conosco ogni autogrill d'Italia. Viaggio tranquillo e sicuro garantito.",
-    prefs:{ music:true, talking:false, smoking:false, pets:false, food:false, stops:true, ac:true, quiet:true }
-  },
-  {
-    id:3, name:"Luca Bernini", email:"luca@nordtrasporti.eu", password:"pass123",
-    companyId:3, truck:"Mercedes Actros", plate:"TO 773 AZ", experience:15, rating:4.8, avatar:"LB",
-    bio:"15 anni sulla strada, 500.000 km percorsi. Puntuale, cordiale, sempre disponibile.",
-    prefs:{ music:false, talking:true, smoking:false, pets:true, food:true, stops:false, ac:true, quiet:false }
-  },
-];
-
-const MOCK_USERS = [
-  { id:1, name:"Sofia Marino", email:"sofia@email.it", password:"pass123", avatar:"SM" },
-  { id:2, name:"Alessandro Conti", email:"alex@email.it", password:"pass123", avatar:"AC" },
-];
-
-const mkDate = (days, h=9) => {
-  const d = new Date(); d.setDate(d.getDate()+days); d.setHours(h,0,0,0); return d;
+// ── Foto avatar autisti (SVG generati inline) ──
+// Ogni autista ha un colore skin/hair diverso per variazione realistica
+const DRIVER_PHOTOS = {
+  1: `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'>
+    <circle cx='60' cy='60' r='60' fill='%23e8f4fd'/>
+    <circle cx='60' cy='46' r='22' fill='%23f4c39a'/>
+    <ellipse cx='60' cy='100' rx='30' ry='22' fill='%232196d3'/>
+    <path d='M38 44 Q60 20 82 44' fill='%23704214'/>
+    <circle cx='52' cy='48' r='3' fill='%23333'/>
+    <circle cx='68' cy='48' r='3' fill='%23333'/>
+    <path d='M52 58 Q60 64 68 58' stroke='%23c0714a' stroke-width='2' fill='none' stroke-linecap='round'/>
+    <rect x='20' y='78' width='80' height='6' rx='3' fill='%231a7fbf' opacity='0.5'/>
+    <text x='60' y='115' text-anchor='middle' font-size='8' fill='%231a7fbf' font-family='sans-serif' font-weight='bold'>AUTISTA</text>
+  </svg>`,
+  2: `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'>
+    <circle cx='60' cy='60' r='60' fill='%23fff8ed'/>
+    <circle cx='60' cy='46' r='22' fill='%23d4956a'/>
+    <ellipse cx='60' cy='100' rx='30' ry='22' fill='%23ff6b4a'/>
+    <path d='M38 38 Q60 18 82 38 Q82 28 60 26 Q38 28 38 38Z' fill='%231a0a00'/>
+    <circle cx='52' cy='48' r='3' fill='%23111'/>
+    <circle cx='68' cy='48' r='3' fill='%23111'/>
+    <path d='M53 59 Q60 65 67 59' stroke='%23a05030' stroke-width='2' fill='none' stroke-linecap='round'/>
+    <path d='M42 42 Q42 50 38 54' stroke='%231a0a00' stroke-width='4' fill='none' stroke-linecap='round'/>
+    <path d='M78 42 Q78 50 82 54' stroke='%231a0a00' stroke-width='4' fill='none' stroke-linecap='round'/>
+    <text x='60' y='115' text-anchor='middle' font-size='8' fill='%23ff6b4a' font-family='sans-serif' font-weight='bold'>AUTISTA</text>
+  </svg>`,
+  3: `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'>
+    <circle cx='60' cy='60' r='60' fill='%23f0fff8'/>
+    <circle cx='60' cy='46' r='22' fill='%23fddbb4'/>
+    <ellipse cx='60' cy='100' rx='30' ry='22' fill='%233dcb8e'/>
+    <path d='M38 34 Q60 14 82 34 L82 44 Q60 36 38 44Z' fill='%238B6914'/>
+    <circle cx='52' cy='48' r='3' fill='%23333'/>
+    <circle cx='68' cy='48' r='3' fill='%23333'/>
+    <path d='M50 57 Q60 63 70 57' stroke='%23b06040' stroke-width='2' fill='none' stroke-linecap='round'/>
+    <rect x='46' y='56' width='28' height='3' rx='1' fill='%23c0a060' opacity='0.6'/>
+    <text x='60' y='115' text-anchor='middle' font-size='8' fill='%232aad74' font-family='sans-serif' font-weight='bold'>AUTISTA</text>
+  </svg>`,
 };
 
-const MOCK_TRIPS = [
-  { id:1, driverId:1, from:"Milano", to:"Roma", departure:mkDate(1,7), arrival:mkDate(1,15), seats:4, seatsLeft:3, price:35, distance:"570 km", notes:"Sosta a Bologna. Camion climatizzato e confortevole.", status:"active" },
-  { id:2, driverId:2, from:"Napoli", to:"Milano", departure:mkDate(2,6), arrival:mkDate(2,17), seats:3, seatsLeft:1, price:42, distance:"760 km", notes:"Partenza puntuale. Ottima compagnia garantita.", status:"active" },
-  { id:3, driverId:3, from:"Torino", to:"Bari", departure:mkDate(3,8), arrival:mkDate(3,20), seats:2, seatsLeft:2, price:55, distance:"880 km", notes:"Autostrada A21 e A14. Viaggio diretto.", status:"active" },
-  { id:4, driverId:1, from:"Roma", to:"Firenze", departure:mkDate(5,9), arrival:mkDate(5,13), seats:4, seatsLeft:4, price:25, distance:"280 km", notes:"Ideale per il weekend. Partenza puntuale.", status:"active" },
-  { id:5, driverId:2, from:"Bologna", to:"Venezia", departure:mkDate(7,10), arrival:mkDate(7,12), seats:3, seatsLeft:0, price:18, distance:"140 km", notes:"Viaggio breve e comodo.", status:"full" },
-  { id:6, driverId:3, from:"Genova", to:"Palermo", departure:mkDate(4,6), arrival:mkDate(5,10), seats:2, seatsLeft:1, price:65, distance:"1100 km", notes:"Incluso traghetto notturno! Esperienza unica.", status:"active" },
-];
+// Generatore foto per nuovi autisti registrati (palette variata)
+const generateDriverPhoto = (name, id) => {
+  const palettes = [
+    { skin:'%23f4c39a', hair:'%23704214', shirt:'%232196d3' },
+    { skin:'%23d4956a', hair:'%231a0a00', shirt:'%23ff6b4a' },
+    { skin:'%23fddbb4', hair:'%238B6914', shirt:'%233dcb8e' },
+    { skin:'%23c68642', hair:'%23222',    shirt:'%23ffb830' },
+    { skin:'%23f0c080', hair:'%23503010', shirt:'%23a855f7' },
+    { skin:'%23e8b090', hair:'%23300a00', shirt:'%23f43f5e' },
+  ];
+  const p = palettes[id % palettes.length];
+  return `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'>
+    <circle cx='60' cy='60' r='60' fill='%23e8f4fd'/>
+    <circle cx='60' cy='46' r='22' fill='${p.skin}'/>
+    <ellipse cx='60' cy='100' rx='30' ry='22' fill='${p.shirt}'/>
+    <path d='M38 36 Q60 16 82 36 L82 46 Q60 38 38 46Z' fill='${p.hair}'/>
+    <circle cx='52' cy='48' r='3' fill='%23333'/>
+    <circle cx='68' cy='48' r='3' fill='%23333'/>
+    <path d='M52 58 Q60 64 68 58' stroke='%23c0714a' stroke-width='2' fill='none' stroke-linecap='round'/>
+    <text x='60' y='115' text-anchor='middle' font-size='8' fill='%231a7fbf' font-family='sans-serif' font-weight='bold'>AUTISTA</text>
+  </svg>`;
+};
 
-const MOCK_BOOKINGS = [
-  { id:1, userId:1, tripId:1, status:"confirmed", seats:1, total:35, createdAt:new Date(Date.now()-86400000*2) },
-  { id:2, userId:1, tripId:3, status:"confirmed", seats:1, total:55, createdAt:new Date(Date.now()-86400000*5) },
-];
+// ─── SUPABASE DB LAYER ────────────────────────────────────────────────────────
+// Queste funzioni leggono e scrivono dati REALI su Supabase
+
+// Legge tutti i viaggi attivi (con dati autista e azienda)
+const dbGetTrips = async (filters={}) => {
+  let q = supabase
+    .from('trips')
+    .select('*, driver:drivers(*, company:companies(*))')
+    .eq('status', 'active')
+    .gte('departure', new Date().toISOString())
+    .order('departure', { ascending: true });
+  if (filters.from) q = q.ilike('from_city', `%${filters.from}%`);
+  if (filters.to)   q = q.ilike('to_city',   `%${filters.to}%`);
+  if (filters.date) q = q.gte('departure', filters.date).lt('departure', filters.date + 'T23:59:59');
+  const { data, error } = await q;
+  if (error) { console.error(error); return []; }
+  // Normalizza i campi per compatibilità con il resto dell'app
+  return (data || []).map(t => ({
+    ...t,
+    from: t.from_city, to: t.to_city,
+    seatsLeft: t.seats_left, driverId: t.driver_id,
+  }));
+};
+
+// Legge le prenotazioni di un utente
+const dbGetUserBookings = async (userId) => {
+  const { data, error } = await supabase
+    .from('bookings')
+    .select('*, trip:trips(*, driver:drivers(*, company:companies(*)))')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (error) { console.error(error); return []; }
+  return (data || []).map(b => ({
+    ...b, userId: b.user_id, tripId: b.trip_id,
+    trip: b.trip ? { ...b.trip, from: b.trip.from_city, to: b.trip.to_city, seatsLeft: b.trip.seats_left } : null,
+  }));
+};
+
+// Legge i viaggi pubblicati da un autista
+const dbGetDriverTrips = async (driverId) => {
+  const { data, error } = await supabase
+    .from('trips')
+    .select('*, bookings(count)')
+    .eq('driver_id', driverId)
+    .order('departure', { ascending: true });
+  if (error) { console.error(error); return []; }
+  return (data || []).map(t => ({ ...t, from: t.from_city, to: t.to_city, seatsLeft: t.seats_left, driverId: t.driver_id }));
+};
+
+// Pubblica un nuovo viaggio
+const dbCreateTrip = async (driverId, nt) => {
+  const dep = new Date(nt.date + 'T' + nt.time);
+  const arr = new Date(dep.getTime() + 6 * 3600000); // stima +6h
+  const { data, error } = await supabase.from('trips').insert({
+    driver_id: driverId, from_city: nt.from, to_city: nt.to,
+    departure: dep.toISOString(), arrival: arr.toISOString(),
+    seats: parseInt(nt.seats), seats_left: parseInt(nt.seats),
+    price: parseFloat(nt.price), notes: nt.notes || '', status: 'active',
+  }).select().single();
+  if (error) throw error;
+  return data;
+};
+
+// Prenota un viaggio
+const dbBookTrip = async (userId, tripId, seats, total) => {
+  // Usa una transazione: decrementa seats_left e crea booking
+  const { data: trip } = await supabase.from('trips').select('seats_left').eq('id', tripId).single();
+  if (!trip || trip.seats_left < seats) throw new Error('Posti non disponibili');
+  const { error: e1 } = await supabase.from('trips').update({ seats_left: trip.seats_left - seats }).eq('id', tripId);
+  if (e1) throw e1;
+  const { data, error: e2 } = await supabase.from('bookings').insert({
+    user_id: userId, trip_id: tripId, seats, total, status: 'confirmed',
+  }).select().single();
+  if (e2) throw e2;
+  return data;
+};
+
+// Legge tutte le aziende (per il dropdown registrazione autista)
+const dbGetCompanies = async () => {
+  const { data, error } = await supabase.from('companies').select('*').order('name');
+  if (error) { console.error(error); return []; }
+  return data || [];
+};
+
+// Helper: restituisce profilo autista completo dal DB
+const dbGetDriver = async (driverId) => {
+  const { data, error } = await supabase
+    .from('drivers')
+    .select('*, company:companies(*)')
+    .eq('id', driverId)
+    .single();
+  if (error) return null;
+  return data;
+};
+
+// Stato globale in memoria (si popola da Supabase al caricamento)
+let _trips    = [];
+let _bookings = [];
+
+// Helper lookup in memoria (usati dai componenti già esistenti)
+const getDriver  = id => null;   // ora i dati driver arrivano join dal DB
+const getCompany = id => null;
+const getTrip    = id => _trips.find(t => t.id === id);
 
 // ─── UTILS ────────────────────────────────────────────────────────────────────
 const fmtDate = d => d ? new Date(d).toLocaleDateString('it-IT',{weekday:'short',day:'2-digit',month:'short'}) : '';
 const fmtTime = d => d ? new Date(d).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}) : '';
-const getDriver = id => MOCK_DRIVERS.find(d=>d.id===id);
-const getCompany = id => MOCK_COMPANIES.find(c=>c.id===id);
-const getTrip = id => MOCK_TRIPS.find(t=>t.id===id);
+// getDriver, getCompany, getTrip ora leggono dal DB — vedi dbGetDriver etc.
 
 // Calcola durata approssimativa tra due date e restituisce stringa leggibile
 const calcDuration = (dep, arr) => {
@@ -1079,7 +1824,39 @@ const calcDurationFromKm = (distanceStr) => {
   return `~${hFloor}h ${mins}min`;
 };
 
-// ─── COMPONENTS ───────────────────────────────────────────────────────────────
+// Restituisce la foto dell'autista (SVG inline o generata dinamicamente)
+const getDriverPhoto = (driver) => {
+  if (!driver) return null;
+  if (driver.photoUrl) return driver.photoUrl; // foto caricata da utente
+  return DRIVER_PHOTOS[driver.id] || generateDriverPhoto(driver.name, driver.id);
+};
+
+// Foto autista con fallback avatar
+function DriverPhoto({ driver, size=64, style={} }) {
+  const photo = getDriverPhoto(driver);
+  if (!photo) {
+    return (
+      <div className="avatar avatar-driver" style={{width:size,height:size,fontSize:Math.round(size*0.3),...style}}>
+        {driver?.avatar}
+      </div>
+    );
+  }
+  return (
+    <img
+      src={photo}
+      alt={driver?.name}
+      style={{
+        width:size, height:size,
+        borderRadius:'50%',
+        objectFit:'cover',
+        border:'2.5px solid rgba(255,107,74,0.3)',
+        boxShadow:'0 2px 10px rgba(255,107,74,0.2)',
+        flexShrink:0,
+        ...style
+      }}
+    />
+  );
+}
 
 function Toast({ msg, type='success', onClose }) {
   useEffect(() => { const t=setTimeout(onClose,3500); return ()=>clearTimeout(t); }, []);
@@ -1156,6 +1933,7 @@ function Nav({ user, driver, onLoginOpen, onLogout, onNavigate, currentPage }) {
   const isIn = user||driver;
   const name = (user||driver)?.name;
   const initials = name ? name.split(' ').map(n=>n[0]).join('') : '';
+  const driverPhoto = driver ? getDriverPhoto(driver) : null;
   return (
     <nav>
       <div className="nav-logo" onClick={()=>onNavigate('home')}>
@@ -1177,8 +1955,13 @@ function Nav({ user, driver, onLoginOpen, onLogout, onNavigate, currentPage }) {
         ) : (
           <>
             <div style={{display:'flex',alignItems:'center',gap:10}}>
-              <div className={`avatar ${driver?'avatar-driver':''}`}>{initials}</div>
+              {driver && driverPhoto ? (
+                <img src={driverPhoto} alt={driver.name} className="nav-driver-photo"/>
+              ) : (
+                <div className={`avatar ${driver?'avatar-driver':''}`}>{initials}</div>
+              )}
               <span style={{fontSize:14,fontWeight:700,color:'var(--ink)'}}>{name?.split(' ')[0]}</span>
+              {driver && <span className="badge badge-coral" style={{fontSize:10}}>🚛 Autista</span>}
             </div>
             <button className="btn btn-ghost btn-sm" onClick={onLogout}>Esci</button>
           </>
@@ -1204,33 +1987,56 @@ function AuthModal({ mode:initMode, onClose, onLogin }) {
   const [driverPrefsReg, setDriverPrefsReg] = useState({
     music:true, talking:true, smoking:false, pets:false, food:true, stops:true, ac:true, quiet:false
   });
+  const [driverPhotoUrl, setDriverPhotoUrl] = useState(null); // foto profilo autista
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
   const up = k => e => setForm(f=>({...f,[k]:e.target.value}));
   const togglePrefReg = k => setDriverPrefsReg(p=>({...p,[k]:!p[k]}));
 
   const isDriverMode = mode === 'driver-login' || mode === 'driver-register';
+  const [companies, setCompanies] = useState([]);
+  useEffect(() => {
+    if (mode === 'driver-register') dbGetCompanies().then(setCompanies);
+  }, [mode]);
 
   const submitLogin = async () => {
     setErr(''); setLoading(true);
-    await new Promise(r=>setTimeout(r,700));
-    setLoading(false);
-    if (mode==='driver-login') {
-      const d = MOCK_DRIVERS.find(d=>d.email===form.email&&d.password===form.password);
-      if (!d) { setErr('Credenziali non valide.'); return; }
-      onLogin(null,d); onClose(); return;
+    try {
+      if (mode==='login') {
+        // Login passeggero via Supabase Auth
+        const { data, error } = await supabase.auth.signInWithPassword({ email: form.email, password: form.password });
+        if (error) { setErr('Email o password errati.'); return; }
+        // Leggi profilo utente dalla tabella users
+        const { data: profile } = await supabase.from('users').select('*').eq('id', data.user.id).single();
+        const u = { id: data.user.id, name: profile?.name || data.user.email, email: data.user.email, avatar: (profile?.name||data.user.email).split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2) };
+        onLogin(u, null); onClose(); return;
+      }
+      if (mode==='driver-login') {
+        // Login autista via Supabase Auth
+        const { data, error } = await supabase.auth.signInWithPassword({ email: form.email, password: form.password });
+        if (error) { setErr('Credenziali non valide.'); return; }
+        // Leggi profilo autista
+        const { data: drv, error: de } = await supabase.from('drivers').select('*, company:companies(*)').eq('auth_id', data.user.id).single();
+        if (de || !drv) { setErr('Profilo autista non trovato. Usa "Registrati".'); return; }
+        onLogin(null, { ...drv, avatar: drv.name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2) }); onClose(); return;
+      }
+      if (mode==='register') {
+        // Registrazione passeggero
+        if (!form.name||!form.email||!form.password) { setErr('Compila tutti i campi.'); return; }
+        if (form.password !== form.confirmPassword) { setErr('Le password non coincidono.'); return; }
+        const { data, error } = await supabase.auth.signUp({ email: form.email, password: form.password });
+        if (error) { setErr(error.message); return; }
+        // Salva nome nella tabella users
+        await supabase.from('users').insert({ id: data.user.id, name: form.name, email: form.email });
+        const nu = { id: data.user.id, name: form.name, email: form.email, avatar: form.name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2) };
+        onLogin(nu, null); onClose();
+      }
+    } catch(e) {
+      setErr('Errore di connessione. Riprova.');
+      console.error(e);
+    } finally {
+      setLoading(false);
     }
-    if (mode==='login') {
-      const u = MOCK_USERS.find(u=>u.email===form.email&&u.password===form.password);
-      if (!u) { setErr('Email o password errati.'); return; }
-      onLogin(u,null); onClose(); return;
-    }
-    // user register
-    if (!form.name||!form.email||!form.password) { setErr('Compila tutti i campi.'); return; }
-    if (form.password !== form.confirmPassword) { setErr('Le password non coincidono.'); return; }
-    const nu = { id:Date.now(), name:form.name, email:form.email, avatar:form.name.split(' ').map(n=>n[0]).join('') };
-    MOCK_USERS.push({...nu,password:form.password});
-    onLogin(nu,null); onClose();
   };
 
   const submitDriverRegStep1 = () => {
@@ -1248,37 +2054,51 @@ function AuthModal({ mode:initMode, onClose, onLogin }) {
 
   const submitDriverRegFinal = async () => {
     setErr(''); setLoading(true);
-    await new Promise(r=>setTimeout(r,900));
-    setLoading(false);
+    try {
+      // 1. Registra utente in Supabase Auth
+      const { data: authData, error: authErr } = await supabase.auth.signUp({ email: form.email, password: form.password });
+      if (authErr) { setErr(authErr.message); return; }
+      const authId = authData.user.id;
 
-    // resolve company
-    let companyId;
-    if (form.companyChoice === 'new') {
-      if (!form.newCompanyName||!form.newCompanyCity) { setErr('Inserisci nome e città della nuova azienda.'); return; }
-      const nc = { id: Date.now(), name: form.newCompanyName, city: form.newCompanyCity, trucks:1, drivers:1, logo:'🏢' };
-      MOCK_COMPANIES.push(nc);
-      companyId = nc.id;
-    } else {
-      companyId = parseInt(form.companyId);
+      // 2. Crea o trova azienda
+      let companyId;
+      if (form.companyChoice === 'new') {
+        if (!form.newCompanyName||!form.newCompanyCity) { setErr('Inserisci nome e città della nuova azienda.'); return; }
+        const { data: co, error: coErr } = await supabase.from('companies')
+          .insert({ name: form.newCompanyName, city: form.newCompanyCity })
+          .select().single();
+        if (coErr) { setErr('Errore creazione azienda: ' + coErr.message); return; }
+        companyId = co.id;
+      } else {
+        companyId = form.companyId;
+      }
+
+      // 3. Salva profilo autista nella tabella drivers
+      const { data: drv, error: drvErr } = await supabase.from('drivers').insert({
+        auth_id: authId,
+        name: form.name,
+        email: form.email,
+        company_id: companyId,
+        truck: form.truck || 'Camion Generico',
+        plate: form.plate.toUpperCase(),
+        experience: parseInt(form.experience) || 1,
+        rating: 5.0,
+        photo_url: driverPhotoUrl || null,
+        bio: form.bio || `Autista professionale con ${form.experience || 1} anni di esperienza.`,
+        prefs: { ...driverPrefsReg },
+      }).select('*, company:companies(*)').single();
+      if (drvErr) { setErr('Errore salvataggio profilo: ' + drvErr.message); return; }
+
+      const nd = { ...drv, companyId: drv.company_id, photoUrl: drv.photo_url,
+        avatar: form.name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2) };
+      onLogin(null, nd);
+      onClose();
+    } catch(e) {
+      setErr('Errore di connessione. Riprova.');
+      console.error(e);
+    } finally {
+      setLoading(false);
     }
-
-    const nd = {
-      id: Date.now(),
-      name: form.name,
-      email: form.email,
-      password: form.password,
-      companyId,
-      truck: form.truck || 'Camion Generico',
-      plate: form.plate.toUpperCase(),
-      experience: parseInt(form.experience) || 1,
-      rating: 5.0,
-      avatar: form.name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2),
-      bio: form.bio || `Autista professionale con ${form.experience || 1} anni di esperienza.`,
-      prefs: { ...driverPrefsReg },
-    };
-    MOCK_DRIVERS.push(nd);
-    onLogin(null, nd);
-    onClose();
   };
 
   const modalTitle = () => {
@@ -1337,7 +2157,6 @@ function AuthModal({ mode:initMode, onClose, onLogin }) {
             <>
               <div className="form-group"><label className="form-label">Email</label><input className="form-input" type="email" placeholder="tua@email.it" value={form.email} onChange={up('email')}/></div>
               <div className="form-group"><label className="form-label">Password</label><input className="form-input" type="password" placeholder="••••••••" value={form.password} onChange={up('password')}/></div>
-              <div className="alert alert-info">💡 Demo: <strong>sofia@email.it</strong> / <strong>pass123</strong></div>
               <button className="btn btn-ocean btn-full btn-lg" onClick={submitLogin} disabled={loading}>
                 {loading?<><span className="spinner"></span> Caricamento...</>:'Accedi →'}
               </button>
@@ -1362,9 +2181,8 @@ function AuthModal({ mode:initMode, onClose, onLogin }) {
           {/* ── DRIVER LOGIN ── */}
           {mode==='driver-login' && (
             <>
-              <div className="form-group"><label className="form-label">Email Professionale</label><input className="form-input" type="email" placeholder="marco@logitrans.it" value={form.email} onChange={up('email')}/></div>
+              <div className="form-group"><label className="form-label">Email Professionale</label><input className="form-input" type="email" placeholder="tuo@email.it" value={form.email} onChange={up('email')}/></div>
               <div className="form-group"><label className="form-label">Password</label><input className="form-input" type="password" placeholder="••••••••" value={form.password} onChange={up('password')}/></div>
-              <div className="alert alert-info">💡 Demo: <strong>marco@logitrans.it</strong> / <strong>pass123</strong></div>
               <button className="btn btn-full btn-lg" style={{background:'linear-gradient(135deg,var(--coral),#ff8060)',color:'white',boxShadow:'0 4px 16px rgba(255,107,74,0.3)'}} onClick={submitLogin} disabled={loading}>
                 {loading?<><span className="spinner"></span> Caricamento...</>:'Accedi come Autista 🚛'}
               </button>
@@ -1375,11 +2193,24 @@ function AuthModal({ mode:initMode, onClose, onLogin }) {
           {mode==='driver-register' && step===1 && (
             <>
               <div className="alert alert-info" style={{marginBottom:16}}>
-                📋 Step 1 di 3 — Dati personali e credenziali di accesso
+                📋 Step 1 di 3 — Foto profilo, dati personali e credenziali
               </div>
-              <div className="form-group"><label className="form-label">Nome Completo</label><input className="form-input" placeholder="Mario Rossi" value={form.name} onChange={up('name')}/></div>
-              <div className="form-group"><label className="form-label">Email Professionale</label><input className="form-input" type="email" placeholder="mario@azienda.it" value={form.email} onChange={up('email')}/></div>
-              <div className="form-group"><label className="form-label">Telefono</label><input className="form-input" type="tel" placeholder="+39 333 123 4567" value={form.phone} onChange={up('phone')}/></div>
+
+              {/* PHOTO UPLOAD */}
+              <div style={{display:'grid',gridTemplateColumns:'180px 1fr',gap:20,alignItems:'start',marginBottom:4}}>
+                <PhotoUpload
+                  value={driverPhotoUrl}
+                  onChange={setDriverPhotoUrl}
+                  label="📷 Foto Profilo"
+                  hint="JPG, PNG • max 5MB"
+                />
+                <div>
+                  <div className="form-group"><label className="form-label">Nome Completo</label><input className="form-input" placeholder="Mario Rossi" value={form.name} onChange={up('name')}/></div>
+                  <div className="form-group"><label className="form-label">Email Professionale</label><input className="form-input" type="email" placeholder="mario@azienda.it" value={form.email} onChange={up('email')}/></div>
+                  <div className="form-group"><label className="form-label">Telefono</label><input className="form-input" type="tel" placeholder="+39 333 123 4567" value={form.phone} onChange={up('phone')}/></div>
+                </div>
+              </div>
+
               <div className="input-row">
                 <div className="form-group"><label className="form-label">Password</label><input className="form-input" type="password" placeholder="••••••••" value={form.password} onChange={up('password')}/></div>
                 <div className="form-group"><label className="form-label">Conferma Password</label><input className="form-input" type="password" placeholder="••••••••" value={form.confirmPassword} onChange={up('confirmPassword')}/></div>
@@ -1448,7 +2279,7 @@ function AuthModal({ mode:initMode, onClose, onLogin }) {
 
                 {form.companyChoice==='existing' && (
                   <select className="form-select" value={form.companyId} onChange={up('companyId')}>
-                    {MOCK_COMPANIES.map(c=><option key={c.id} value={c.id}>{c.logo} {c.name} — {c.city}</option>)}
+                    {companies.map(c=><option key={c.id} value={c.id}>🏢 {c.name} — {c.city}</option>)}
                   </select>
                 )}
                 {form.companyChoice==='new' && (
@@ -1537,7 +2368,7 @@ function TripCard({ trip, onClick }) {
         </div>
         {driver && (
           <div className="driver-strip">
-            <div className="avatar avatar-driver" style={{width:30,height:30,fontSize:11}}>{driver.avatar}</div>
+            <DriverPhoto driver={driver} size={30}/>
             <div style={{flex:1}}>
               <span style={{fontWeight:700,fontSize:13,color:'var(--ink)'}}>{driver.name}</span>
               <span style={{marginLeft:8}} className="company-badge">🏢 {company?.name}</span>
@@ -1934,7 +2765,7 @@ function BookingModalFixed({ trip, user, onClose, onBook }) {
                   <div style={{fontSize:11,fontWeight:800,letterSpacing:1.2,textTransform:'uppercase',color:'var(--ink-soft)',marginBottom:10}}>Il Tuo Autista</div>
                   <div style={{background:'linear-gradient(135deg,var(--sky),#d0eeff)',borderRadius:16,padding:20,border:'1.5px solid var(--border)',height:'calc(100% - 28px)'}}>
                     <div style={{display:'flex',gap:12,marginBottom:14}}>
-                      <div className="avatar avatar-driver avatar-lg">{driver.avatar}</div>
+                      <DriverPhoto driver={driver} size={64}/>
                       <div>
                         <div style={{fontWeight:800,fontSize:16,color:'var(--ink)',marginBottom:3}}>{driver.name}</div>
                         <div style={{fontSize:12,color:'var(--ink-soft)',marginBottom:6}}>🚛 {driver.truck}</div>
@@ -2136,6 +2967,10 @@ function TripDetailModal({ trip, user, onClose, onBookOpen }) {
 // ─── HOME ─────────────────────────────────────────────────────────────────────
 
 function HomePage({ onNavigate, onLoginOpen }) {
+  const [homeTrips, setHomeTrips] = useState([]);
+  useEffect(() => {
+    dbGetTrips().then(data => setHomeTrips(data.slice(0,4)));
+  }, []);
   return (
     <div>
       <div className="hero">
@@ -2212,7 +3047,13 @@ function HomePage({ onNavigate, onLoginOpen }) {
           <button className="btn btn-ocean" onClick={()=>onNavigate('trips')}>Vedi Tutti →</button>
         </div>
         <div style={{marginTop:32}} className="grid-2">
-          {MOCK_TRIPS.slice(0,4).map(t=>(
+          {homeTrips.length === 0 ? (
+            <div style={{gridColumn:'1/-1',textAlign:'center',padding:'40px 0',color:'var(--ink-faint)'}}>
+              <div style={{fontSize:48,marginBottom:12}}>🚛</div>
+              <div style={{fontWeight:700,fontSize:16}}>Nessun viaggio disponibile al momento</div>
+              <p style={{marginTop:8}}>Sii il primo autista a pubblicare un viaggio!</p>
+            </div>
+          ) : homeTrips.map(t=>(
             <TripCard key={t.id} trip={t} onClick={()=>onNavigate('trips')}/>
           ))}
         </div>
@@ -2275,26 +3116,36 @@ function HomePage({ onNavigate, onLoginOpen }) {
 
 function TripsPage({ user, onLoginOpen }) {
   const [filters, setFilters] = useState({ from:'', to:'', date:'' });
+  const [trips, setTrips] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selTrip, setSelTrip] = useState(null);
   const [bookTrip, setBookTrip] = useState(null);
   const [toast, setToast] = useState(null);
-  const [, forceUpdate] = useState(0);
 
-  const upF = k => e => setFilters(f=>({...f,[k]:e.target.value}));
+  // Carica viaggi reali da Supabase
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      const data = await dbGetTrips(filters);
+      setTrips(data);
+      setLoading(false);
+    };
+    load();
+  }, [filters.from, filters.to, filters.date]);
 
-  const filtered = MOCK_TRIPS.filter(t => {
-    if (filters.from && !t.from.toLowerCase().includes(filters.from.toLowerCase())) return false;
-    if (filters.to && !t.to.toLowerCase().includes(filters.to.toLowerCase())) return false;
-    return true;
-  });
+  const filtered = trips; // il filtro è già fatto lato DB
 
-  const handleBook = (trip, seats) => {
-    const i = MOCK_TRIPS.findIndex(t=>t.id===trip.id);
-    if (i>=0) MOCK_TRIPS[i].seatsLeft -= seats;
-    MOCK_BOOKINGS.push({ id:Date.now(), userId:user?.id||0, tripId:trip.id, status:'confirmed', seats, total:seats*trip.price, createdAt:new Date() });
-    setBookTrip(null); setSelTrip(null);
-    forceUpdate(n=>n+1);
-    setToast({ msg:'Prenotazione confermata! Buon viaggio 🚛', type:'success' });
+  const handleBook = async (trip, seats) => {
+    if (!user) { onLoginOpen('login'); return; }
+    try {
+      await dbBookTrip(user.id, trip.id, seats, seats * trip.price);
+      // Aggiorna seats_left localmente
+      setTrips(ts => ts.map(t => t.id === trip.id ? { ...t, seatsLeft: t.seatsLeft - seats } : t));
+      setBookTrip(null); setSelTrip(null);
+      setToast({ msg:'Prenotazione confermata! Buon viaggio 🚛', type:'success' });
+    } catch(e) {
+      setToast({ msg: e.message || 'Errore nella prenotazione', type:'error' });
+    }
   };
 
   return (
@@ -2303,33 +3154,48 @@ function TripsPage({ user, onLoginOpen }) {
       <div style={{background:'linear-gradient(135deg,var(--sky),white)',borderBottom:'1.5px solid var(--border)',padding:'40px 40px 0'}}>
         <div style={{maxWidth:1200,margin:'0 auto'}}>
           <div className="page-title">Trova il Tuo <span className="accent">Prossimo Viaggio</span></div>
-          <div className="page-sub">{filtered.length} viaggi disponibili</div>
+          <div className="page-sub">{filtered.length} viaggi disponibili in tutta Europa</div>
         </div>
       </div>
 
       <div className="section">
         <div className="search-bar">
-          <div className="search-field">
+          <div className="search-field" style={{minWidth:220}}>
             <label>🏙️ Da</label>
-            <input className="form-input" placeholder="Città di partenza..." value={filters.from} onChange={upF('from')}/>
+            <CityAutocomplete
+              id="search-from"
+              value={filters.from}
+              onChange={v => setFilters(f=>({...f, from:v}))}
+              placeholder="Città di partenza..."
+            />
           </div>
-          <div className="search-field">
+          <div className="search-field" style={{minWidth:220}}>
             <label>📍 A</label>
-            <input className="form-input" placeholder="Destinazione..." value={filters.to} onChange={upF('to')}/>
+            <CityAutocomplete
+              id="search-to"
+              value={filters.to}
+              onChange={v => setFilters(f=>({...f, to:v}))}
+              placeholder="Destinazione europea..."
+            />
           </div>
           <div className="search-field">
             <label>📅 Data</label>
-            <input className="form-input" type="date" value={filters.date} onChange={upF('date')}/>
+            <input className="form-input" type="date" value={filters.date} onChange={e=>setFilters(f=>({...f,date:e.target.value}))}/>
           </div>
           <button className="btn btn-primary" style={{paddingLeft:28,paddingRight:28}}>🔍 Cerca</button>
           <button className="btn btn-ghost" onClick={()=>setFilters({from:'',to:'',date:''})}>Reset</button>
         </div>
 
-        {filtered.length===0 ? (
+        {loading ? (
+          <div className="empty-state">
+            <div className="spinner" style={{width:40,height:40,margin:'0 auto 16px'}}></div>
+            <div className="empty-title">Caricamento viaggi...</div>
+          </div>
+        ) : filtered.length===0 ? (
           <div className="empty-state">
             <span className="empty-icon">🔍</span>
             <div className="empty-title">Nessun Viaggio Trovato</div>
-            <p className="empty-desc">Prova a modificare i filtri di ricerca.</p>
+            <p className="empty-desc">Non ci sono ancora viaggi disponibili. Torna presto!</p>
           </div>
         ) : (
           <div className="grid-2">
@@ -2362,8 +3228,13 @@ function TripsPage({ user, onLoginOpen }) {
 
 function UserDashboard({ user, onNavigate }) {
   const [view, setView] = useState('bookings');
-  const myBookings = MOCK_BOOKINGS.filter(b=>b.userId===user.id);
-  const spent = myBookings.reduce((s,b)=>s+b.total,0);
+  const [myBookings, setMyBookings] = useState([]);
+  const [loadingB, setLoadingB] = useState(true);
+  const spent = myBookings.reduce((s,b)=>s+(Number(b.total)||0),0);
+
+  useEffect(() => {
+    dbGetUserBookings(user.id).then(data => { setMyBookings(data); setLoadingB(false); });
+  }, [user.id]);
 
   return (
     <div className="dashboard-layout">
@@ -2456,11 +3327,15 @@ function DriverDashboard({ driver }) {
   const [showNew, setShowNew] = useState(false);
   const [showEditPrefs, setShowEditPrefs] = useState(false);
   const [toast, setToast] = useState(null);
-  const [, forceUpdate] = useState(0);
-  const company = getCompany(driver.companyId);
-  const myTrips = MOCK_TRIPS.filter(t=>t.driverId===driver.id);
-  const myBookings = myTrips.flatMap(t=>MOCK_BOOKINGS.filter(b=>b.tripId===t.id));
-  const earnings = myBookings.reduce((s,b)=>s+b.total,0);
+  const company = driver.company || { name: driver.company_name || 'Azienda' };
+  const [myTrips, setMyTrips] = useState([]);
+  const [myBookings, setMyBookings] = useState([]);
+  const [loadingTrips, setLoadingTrips] = useState(true);
+  const earnings = myBookings.reduce((s,b)=>s+(Number(b.total)||0),0);
+
+  useEffect(() => {
+    dbGetDriverTrips(driver.id).then(data => { setMyTrips(data); setLoadingTrips(false); });
+  }, [driver.id]);
 
   const [nt, setNt] = useState({ from:'', to:'', date:'', time:'09:00', seats:4, price:30, notes:'' });
   const upNt = k => e => setNt(f=>({...f,[k]:e.target.value}));
@@ -2469,12 +3344,27 @@ function DriverDashboard({ driver }) {
   const [driverPrefs, setDriverPrefs] = useState({...driver.prefs});
   const togglePref = k => setDriverPrefs(p=>({...p,[k]:!p[k]}));
 
-  const createTrip = () => {
-    if (!nt.from||!nt.to||!nt.date) return;
-    const dep = new Date(nt.date+'T'+nt.time);
-    MOCK_TRIPS.push({ id:Date.now(), driverId:driver.id, from:nt.from, to:nt.to, departure:dep, arrival:new Date(dep.getTime()+6*3600000), seats:parseInt(nt.seats), seatsLeft:parseInt(nt.seats), price:parseInt(nt.price), distance:'Da calcolare', notes:nt.notes, status:'active' });
-    setShowNew(false); forceUpdate(n=>n+1);
-    setToast({msg:'Viaggio pubblicato con successo! 🎉',type:'success'});
+  // Photo management
+  const [currentPhoto, setCurrentPhoto] = useState(getDriverPhoto(driver));
+
+  const handlePhotoChange = (dataUrl) => {
+    driver.photoUrl = dataUrl; // persist on object
+    setCurrentPhoto(dataUrl || getDriverPhoto(driver));
+    setToast({msg:'Foto profilo aggiornata! 📷',type:'success'});
+  };
+
+  const createTrip = async () => {
+    if (!nt.from||!nt.to||!nt.date) { setToast({msg:'Compila partenza, destinazione e data.',type:'error'}); return; }
+    try {
+      const newTrip = await dbCreateTrip(driver.id, nt);
+      const normalized = { ...newTrip, from: newTrip.from_city, to: newTrip.to_city, seatsLeft: newTrip.seats_left, driverId: newTrip.driver_id };
+      setMyTrips(prev => [normalized, ...prev]);
+      setShowNew(false);
+      setNt({ from:'', to:'', date:'', time:'09:00', seats:4, price:30, notes:'' });
+      setToast({msg:'Viaggio pubblicato con successo! 🎉',type:'success'});
+    } catch(e) {
+      setToast({msg: e.message || 'Errore pubblicazione viaggio', type:'error'});
+    }
   };
 
   const savePrefs = () => {
@@ -2487,8 +3377,23 @@ function DriverDashboard({ driver }) {
     <div className="dashboard-layout">
       {toast && <Toast {...toast} onClose={()=>setToast(null)}/>}
       <div className="sidebar">
-        <div style={{padding:'0 12px 20px'}}>
-          <div className="avatar avatar-driver" style={{width:56,height:56,fontSize:18,marginBottom:10}}>{driver.avatar}</div>
+        <div style={{padding:'0 12px 20px',textAlign:'center'}}>
+          {/* Driver photo in sidebar */}
+          <div style={{position:'relative',display:'inline-block',marginBottom:10}}>
+            <DriverPhoto driver={{...driver, photoUrl: driver.photoUrl}} size={72}/>
+            <button
+              onClick={()=>setView('foto')}
+              title="Cambia foto"
+              style={{
+                position:'absolute',bottom:0,right:0,
+                width:24,height:24,borderRadius:'50%',
+                background:'var(--ocean)',color:'white',
+                border:'2px solid white',fontSize:12,
+                cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',
+                boxShadow:'0 2px 8px rgba(0,0,0,0.2)'
+              }}
+            >✏️</button>
+          </div>
           <div style={{fontWeight:800,fontSize:15,color:'var(--ink)'}}>{driver.name}</div>
           <div style={{fontSize:12,color:'var(--ink-faint)',marginTop:2,fontWeight:600}}>{driver.truck}</div>
           <div className="company-badge" style={{marginTop:8}}>🏢 {company?.name}</div>
@@ -2496,11 +3401,12 @@ function DriverDashboard({ driver }) {
         <div className="divider" style={{margin:'0 12px 12px'}}></div>
         <div className="sidebar-label">Dashboard</div>
         {[
-          {id:'overview',icon:'📊',label:'Panoramica'},
-          {id:'trips',icon:'🗺️',label:'I Miei Viaggi'},
-          {id:'bookings',icon:'🎫',label:'Prenotazioni'},
-          {id:'prefs',icon:'⚙️',label:'Preferenze Bordo'},
-          {id:'truck',icon:'🚛',label:'Il Mio Camion'},
+          {id:'overview', icon:'📊', label:'Panoramica'},
+          {id:'trips',    icon:'🗺️', label:'I Miei Viaggi'},
+          {id:'bookings', icon:'🎫', label:'Prenotazioni'},
+          {id:'prefs',    icon:'⚙️', label:'Preferenze Bordo'},
+          {id:'foto',     icon:'📷', label:'Foto Profilo'},
+          {id:'truck',    icon:'🚛', label:'Il Mio Camion'},
         ].map(item=>(
           <div key={item.id} className={`sidebar-item ${view===item.id?'active':''}`} onClick={()=>setView(item.id)}>
             <div className="s-icon">{item.icon}</div>{item.label}
@@ -2568,7 +3474,7 @@ function DriverDashboard({ driver }) {
                 <thead><tr><th>Rotta</th><th>Data</th><th>Posti</th><th>Prezzo</th><th>Prenotazioni</th><th>Stato</th></tr></thead>
                 <tbody>
                   {myTrips.map(t=>{
-                    const bk=MOCK_BOOKINGS.filter(b=>b.tripId===t.id);
+                    const bk=myBookings.filter(b=>b.tripId===t.id);
                     return (
                       <tr key={t.id}>
                         <td><strong style={{color:'var(--ink)'}}>{t.from} → {t.to}</strong></td>
@@ -2651,6 +3557,69 @@ function DriverDashboard({ driver }) {
           </>
         )}
 
+        {view==='foto' && (
+          <>
+            <div className="page-header">
+              <div className="page-title">Foto <span className="accent">Profilo</span></div>
+              <div className="page-sub">La tua foto viene mostrata ai passeggeri prima della prenotazione</div>
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:28,maxWidth:720,alignItems:'start'}}>
+              {/* Upload */}
+              <div>
+                <PhotoUpload
+                  value={driver.photoUrl || null}
+                  onChange={handlePhotoChange}
+                  label="📷 Carica o Aggiorna Foto"
+                  hint="JPG, PNG, WebP • max 5MB • formato quadrato consigliato"
+                />
+                <div className="alert alert-info" style={{marginTop:12}}>
+                  💡 Una foto professionale aumenta le prenotazioni fino al <strong>3x</strong>. I passeggeri si fidano di più degli autisti con foto reale!
+                </div>
+              </div>
+
+              {/* Preview card */}
+              <div>
+                <div style={{fontSize:11,fontWeight:800,letterSpacing:1.2,textTransform:'uppercase',color:'var(--ink-soft)',marginBottom:12}}>
+                  Anteprima Profilo Pubblico
+                </div>
+                <div style={{background:'linear-gradient(135deg,var(--sky),#d0eeff)',borderRadius:20,padding:24,border:'1.5px solid var(--border)',boxShadow:'var(--shadow-sm)'}}>
+                  <div style={{display:'flex',gap:16,alignItems:'flex-start',marginBottom:16}}>
+                    <DriverPhoto driver={{...driver, photoUrl: driver.photoUrl}} size={80}/>
+                    <div>
+                      <div style={{fontWeight:800,fontSize:17,color:'var(--ink)',marginBottom:3}}>{driver.name}</div>
+                      <div style={{fontSize:12,color:'var(--ink-soft)',marginBottom:6}}>🚛 {driver.truck}</div>
+                      <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                        <div className="company-badge">🏢 {company?.name}</div>
+                      </div>
+                      <div style={{marginTop:8,display:'flex',gap:12}}>
+                        <span style={{fontSize:15,fontWeight:800,color:'#a07600'}}>★ {driver.rating}</span>
+                        <span style={{fontSize:12,color:'var(--ink-faint)',fontWeight:600}}>{driver.experience} anni esp.</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{fontSize:13,color:'var(--ink-soft)',fontStyle:'italic',lineHeight:1.6,borderTop:'1px solid rgba(26,127,191,0.12)',paddingTop:12}}>
+                    "{driver.bio}"
+                  </div>
+                  <div style={{marginTop:12}}>
+                    <DriverPrefsDisplay driver={driver}/>
+                  </div>
+                </div>
+
+                {/* Status badge */}
+                {driver.photoUrl ? (
+                  <div className="alert alert-success" style={{marginTop:12}}>
+                    ✅ Foto profilo attiva — visibile a tutti i passeggeri
+                  </div>
+                ) : (
+                  <div className="alert alert-warn" style={{marginTop:12}}>
+                    ⚠️ Nessuna foto caricata — viene usato l'avatar predefinito
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
         {view==='truck' && (
           <>
             <div className="page-title" style={{marginBottom:24}}>Il Mio <span className="accent">Camion</span></div>
@@ -2686,16 +3655,20 @@ function DriverDashboard({ driver }) {
             </div>
             <div className="modal-body">
               <div className="input-row">
-                <div className="form-group"><label className="form-label">Partenza</label>
-                  <select className="form-select" value={nt.from} onChange={upNt('from')}>
-                    <option value="">Seleziona...</option>{CITIES.map(c=><option key={c}>{c}</option>)}
-                  </select>
-                </div>
-                <div className="form-group"><label className="form-label">Destinazione</label>
-                  <select className="form-select" value={nt.to} onChange={upNt('to')}>
-                    <option value="">Seleziona...</option>{CITIES.map(c=><option key={c}>{c}</option>)}
-                  </select>
-                </div>
+                <CityAutocomplete
+                  id="nt-from"
+                  label="🏙️ Città di Partenza"
+                  value={nt.from}
+                  onChange={v => setNt(f=>({...f, from:v}))}
+                  placeholder="Da dove parti?"
+                />
+                <CityAutocomplete
+                  id="nt-to"
+                  label="📍 Destinazione"
+                  value={nt.to}
+                  onChange={v => setNt(f=>({...f, to:v}))}
+                  placeholder="Dove vai?"
+                />
               </div>
               <div className="input-row">
                 <div className="form-group"><label className="form-label">Data Partenza</label><input className="form-input" type="date" value={nt.date} onChange={upNt('date')} min={new Date().toISOString().split('T')[0]}/></div>
@@ -2709,7 +3682,7 @@ function DriverDashboard({ driver }) {
                 </div>
                 <div className="form-group"><label className="form-label">Prezzo per Posto (€)</label><input className="form-input" type="number" min="5" max="200" value={nt.price} onChange={upNt('price')}/></div>
               </div>
-              <div className="form-group"><label className="form-label">Note per i Passeggeri</label><textarea className="form-textarea" placeholder="Es: sosta Bologna, animali ammessi..." value={nt.notes} onChange={upNt('notes')}/></div>
+              <div className="form-group"><label className="form-label">Note per i Passeggeri</label><textarea className="form-textarea" placeholder="Es: sosta a Bologna, animali ammessi, traghetto incluso..." value={nt.notes} onChange={upNt('notes')}/></div>
               {nt.from && nt.to && <div style={{marginBottom:16}}><MapView from={nt.from} to={nt.to} height={180}/></div>}
               <div style={{display:'flex',justifyContent:'flex-end',gap:12}}>
                 <button className="btn btn-ghost" onClick={()=>setShowNew(false)}>Annulla</button>
