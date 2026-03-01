@@ -1193,6 +1193,7 @@ create table drivers (
   experience int default 1,
   rating numeric(3,2) default 5.0,
   photo_url text,
+  phone text,
   bio text,
   prefs jsonb default '{}',
   created_at timestamptz default now()
@@ -1218,6 +1219,7 @@ create table trips (
   seats_left int not null default 1,
   price numeric(8,2) not null,
   notes text,
+  meeting_point text,
   status text default 'active' check (status in ('active','full','cancelled','completed')),
   created_at timestamptz default now()
 );
@@ -1747,7 +1749,9 @@ const dbCreateTrip = async (driverId, nt) => {
     driver_id: driverId, from_city: nt.from, to_city: nt.to,
     departure: dep.toISOString(), arrival: arr.toISOString(),
     seats: parseInt(nt.seats), seats_left: parseInt(nt.seats),
-    price: parseFloat(nt.price), notes: nt.notes || '', status: 'active',
+    price: parseFloat(nt.price), notes: nt.notes || '',
+    meeting_point: nt.meetingPoint || '',
+    status: 'active',
   }).select().single();
   if (error) throw error;
   return data;
@@ -1772,6 +1776,19 @@ const dbGetCompanies = async () => {
   const { data, error } = await supabase.from('companies').select('*').order('name');
   if (error) { console.error(error); return []; }
   return data || [];
+};
+
+// Cancella una prenotazione
+const dbCancelBooking = async (bookingId, tripId, seats) => {
+  // Aggiorna stato booking
+  const { error: e1 } = await supabase.from('bookings')
+    .update({ status: 'cancelled' }).eq('id', bookingId);
+  if (e1) throw e1;
+  // Restituisce i posti al viaggio
+  const { data: trip } = await supabase.from('trips').select('seats_left').eq('id', tripId).single();
+  if (trip) {
+    await supabase.from('trips').update({ seats_left: trip.seats_left + seats }).eq('id', tripId);
+  }
 };
 
 // Helper: restituisce profilo autista completo dal DB
@@ -2082,6 +2099,7 @@ function AuthModal({ mode:initMode, onClose, onLogin }) {
         auth_id: authId,
         name: form.name,
         email: form.email,
+        phone: form.phone || null,
         company_id: companyId,
         truck: form.truck || 'Camion Generico',
         plate: form.plate.toUpperCase(),
@@ -2186,6 +2204,7 @@ function AuthModal({ mode:initMode, onClose, onLogin }) {
           {mode==='driver-login' && (
             <>
               <div className="form-group"><label className="form-label">Email Professionale</label><input className="form-input" type="email" placeholder="tuo@email.it" value={form.email} onChange={up('email')}/></div>
+              <div className="form-group"><label className="form-label">📞 Numero di Telefono</label><input className="form-input" type="tel" placeholder="+39 333 123 4567" value={form.phone||''} onChange={up('phone')}/><div style={{fontSize:12,color:'var(--ink-faint)',marginTop:4}}>I passeggeri lo vedranno dopo la prenotazione</div></div>
               <div className="form-group"><label className="form-label">Password</label><input className="form-input" type="password" placeholder="••••••••" value={form.password} onChange={up('password')}/></div>
               <button className="btn btn-full btn-lg" style={{background:'linear-gradient(135deg,var(--coral),#ff8060)',color:'white',boxShadow:'0 4px 16px rgba(255,107,74,0.3)'}} onClick={submitLogin} disabled={loading}>
                 {loading?<><span className="spinner"></span> Caricamento...</>:'Accedi come Autista 🚛'}
@@ -3234,14 +3253,40 @@ function UserDashboard({ user, onNavigate }) {
   const [view, setView] = useState('bookings');
   const [myBookings, setMyBookings] = useState([]);
   const [loadingB, setLoadingB] = useState(true);
-  const spent = myBookings.reduce((s,b)=>s+(Number(b.total)||0),0);
+  const [cancellingId, setCancellingId] = useState(null);
+  const [toast, setToast] = useState(null);
+  const spent = myBookings.filter(b=>b.status==='confirmed').reduce((s,b)=>s+(Number(b.total)||0),0);
 
-  useEffect(() => {
+  const reload = () => {
+    setLoadingB(true);
     dbGetUserBookings(user.id).then(data => { setMyBookings(data); setLoadingB(false); });
-  }, [user.id]);
+  };
+
+  useEffect(() => { reload(); }, [user.id]);
+
+  const handleCancel = async (b) => {
+    if (!window.confirm('Sei sicuro di voler cancellare questa prenotazione?')) return;
+    setCancellingId(b.id);
+    try {
+      await dbCancelBooking(b.id, b.trip_id || b.tripId, b.seats);
+      setMyBookings(prev => prev.map(x => x.id===b.id ? {...x, status:'cancelled'} : x));
+      setToast({msg:'Prenotazione cancellata.', type:'success'});
+    } catch(e) {
+      setToast({msg:'Errore nella cancellazione.', type:'error'});
+    } finally {
+      setCancellingId(null);
+    }
+  };
+
+  const statusBadge = (s) => {
+    if (s==='confirmed') return <span className="badge badge-green">✓ Confermata</span>;
+    if (s==='cancelled') return <span className="badge" style={{background:'#fee2e2',color:'#b91c1c'}}>✗ Cancellata</span>;
+    return <span className="badge">{s}</span>;
+  };
 
   return (
     <div className="dashboard-layout">
+      {toast && <Toast {...toast} onClose={()=>setToast(null)}/>}
       <div className="sidebar">
         <div style={{padding:'0 12px 20px'}}>
           <div className="avatar" style={{width:56,height:56,fontSize:18,marginBottom:10}}>{user.avatar}</div>
@@ -3269,11 +3314,12 @@ function UserDashboard({ user, onNavigate }) {
               <div className="page-title">Le Mie <span className="accent">Prenotazioni</span></div>
             </div>
             <div className="stats-row">
-              <div className="stat-card stat-coral"><div className="stat-card-num" style={{color:'var(--coral)'}}>{myBookings.length}</div><div className="stat-card-label">Prenotazioni Totali</div></div>
-              <div className="stat-card stat-mint"><div className="stat-card-num" style={{color:'var(--mint-dim)'}}>{myBookings.filter(b=>b.status==='confirmed').length}</div><div className="stat-card-label">Confermate</div></div>
-              <div className="stat-card stat-mango"><div className="stat-card-num" style={{color:'#a07600'}}>€{spent}</div><div className="stat-card-label">Spesa Totale</div></div>
+              <div className="stat-card stat-coral"><div className="stat-card-num" style={{color:'var(--coral)'}}>{myBookings.filter(b=>b.status==='confirmed').length}</div><div className="stat-card-label">Prenotazioni Attive</div></div>
+              <div className="stat-card stat-mint"><div className="stat-card-num" style={{color:'var(--mint-dim)'}}>€{spent.toFixed(2)}</div><div className="stat-card-label">Spesa Totale</div></div>
             </div>
-            {myBookings.length===0 ? (
+            {loadingB ? (
+              <div className="empty-state"><div style={{fontSize:32}}>⏳</div><div className="empty-title">Caricamento...</div></div>
+            ) : myBookings.length===0 ? (
               <div className="empty-state">
                 <span className="empty-icon">🎫</span>
                 <div className="empty-title">Nessuna Prenotazione</div>
@@ -3281,24 +3327,88 @@ function UserDashboard({ user, onNavigate }) {
                 <button className="btn btn-primary" style={{marginTop:16}} onClick={()=>onNavigate('trips')}>Cerca Viaggi 🗺️</button>
               </div>
             ) : (
-              <div className="table-wrap">
-                <table>
-                  <thead><tr><th>Percorso</th><th>Data</th><th>Posti</th><th>Importo</th><th>Stato</th></tr></thead>
-                  <tbody>
-                    {myBookings.map(b=>{
-                      const t=getTrip(b.tripId); if(!t) return null;
-                      return (
-                        <tr key={b.id}>
-                          <td><strong style={{color:'var(--ink)'}}>{t.from} → {t.to}</strong><div style={{fontSize:11,color:'var(--ink-faint)',marginTop:2,fontFamily:'DM Mono'}}>#{b.id}</div></td>
-                          <td>{fmtDate(t.departure)}</td>
-                          <td>{b.seats} posto/i</td>
-                          <td><span className="mono" style={{color:'var(--coral)',fontWeight:700}}>€{b.total}</span></td>
-                          <td><span className="badge badge-green">✓ confermata</span></td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+              <div style={{display:'flex',flexDirection:'column',gap:16}}>
+                {myBookings.map(b => {
+                  const t = b.trip;
+                  const drv = t?.driver;
+                  const isCancelled = b.status === 'cancelled';
+                  return (
+                    <div key={b.id} className="card" style={{opacity: isCancelled ? 0.6 : 1}}>
+                      <div className="card-body">
+                        {/* Header prenotazione */}
+                        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:12}}>
+                          <div>
+                            <div style={{fontWeight:900,fontSize:18,color:'var(--ink)'}}>
+                              {t ? `${t.from_city || t.from} → ${t.to_city || t.to}` : 'Viaggio'}
+                            </div>
+                            <div style={{fontSize:12,color:'var(--ink-faint)',marginTop:2,fontFamily:'DM Mono'}}>
+                              Prenotazione #{b.id.slice(0,8).toUpperCase()}
+                            </div>
+                          </div>
+                          {statusBadge(b.status)}
+                        </div>
+
+                        {/* Dettagli viaggio */}
+                        {t && (
+                          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,padding:'12px',background:'var(--sky)',borderRadius:10,marginBottom:12}}>
+                            <div>
+                              <div style={{fontSize:11,color:'var(--ink-faint)',fontWeight:700,marginBottom:2}}>📅 DATA PARTENZA</div>
+                              <div style={{fontWeight:700,fontSize:14}}>{fmtDate(t.departure)} alle {fmtTime(t.departure)}</div>
+                            </div>
+                            <div>
+                              <div style={{fontSize:11,color:'var(--ink-faint)',fontWeight:700,marginBottom:2}}>🎫 POSTI PRENOTATI</div>
+                              <div style={{fontWeight:700,fontSize:14}}>{b.seats} posto/i · <span style={{color:'var(--coral)'}}>€{Number(b.total).toFixed(2)}</span></div>
+                            </div>
+                            {t.meeting_point && (
+                              <div style={{gridColumn:'1/-1'}}>
+                                <div style={{fontSize:11,color:'var(--ink-faint)',fontWeight:700,marginBottom:2}}>📍 PUNTO DI INCONTRO</div>
+                                <div style={{fontWeight:700,fontSize:14,color:'var(--ocean)'}}>{t.meeting_point}</div>
+                              </div>
+                            )}
+                            {t.notes && (
+                              <div style={{gridColumn:'1/-1'}}>
+                                <div style={{fontSize:11,color:'var(--ink-faint)',fontWeight:700,marginBottom:2}}>📝 NOTE</div>
+                                <div style={{fontSize:13}}>{t.notes}</div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Contatti autista */}
+                        {drv && (
+                          <div style={{display:'flex',alignItems:'center',gap:12,padding:'10px 12px',background:'#f0fff8',borderRadius:10,marginBottom:12,border:'1.5px solid #c8f5e0'}}>
+                            <DriverPhoto driver={drv} size={44}/>
+                            <div style={{flex:1}}>
+                              <div style={{fontWeight:800,fontSize:14,color:'var(--ink)'}}>{drv.name}</div>
+                              <div style={{fontSize:12,color:'var(--ink-soft)'}}>🚛 {drv.truck} · {drv.plate}</div>
+                            </div>
+                            {drv.phone ? (
+                              <a href={`tel:${drv.phone}`} className="btn btn-primary btn-sm">
+                                📞 Chiama
+                              </a>
+                            ) : (
+                              <div style={{fontSize:12,color:'var(--ink-faint)',fontStyle:'italic'}}>Numero non disponibile</div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Azioni */}
+                        {!isCancelled && (
+                          <div style={{display:'flex',justifyContent:'flex-end'}}>
+                            <button
+                              className="btn btn-ghost btn-sm"
+                              style={{color:'#ef4444',borderColor:'#fecaca'}}
+                              onClick={()=>handleCancel(b)}
+                              disabled={cancellingId===b.id}
+                            >
+                              {cancellingId===b.id ? '...' : '✗ Cancella Prenotazione'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </>
@@ -3686,6 +3796,11 @@ function DriverDashboard({ driver }) {
                 </div>
                 <div className="form-group"><label className="form-label">Prezzo per Posto (€)</label><input className="form-input" type="number" min="5" max="200" value={nt.price} onChange={upNt('price')}/></div>
               </div>
+              <div className="form-group">
+                <label className="form-label">📍 Punto di Incontro</label>
+                <input className="form-input" placeholder="Es: Autogrill Milano Nord (A8), Stazione Centrale Milano, Parcheggio IKEA Corsico..." value={nt.meetingPoint||''} onChange={upNt('meetingPoint')}/>
+                <div style={{fontSize:12,color:'var(--ink-faint)',marginTop:4}}>Indica un luogo preciso e facile da raggiungere dove i passeggeri ti troveranno</div>
+              </div>
               <div className="form-group"><label className="form-label">Note per i Passeggeri</label><textarea className="form-textarea" placeholder="Es: sosta a Bologna, animali ammessi, traghetto incluso..." value={nt.notes} onChange={upNt('notes')}/></div>
               {nt.from && nt.to && <div style={{marginBottom:16}}><MapView from={nt.from} to={nt.to} height={180}/></div>}
               <div style={{display:'flex',justifyContent:'flex-end',gap:12}}>
@@ -3708,6 +3823,47 @@ function App() {
   const [driver, setDriver] = useState(null);
   const [authModal, setAuthModal] = useState(null);
   const [toast, setToast] = useState(null);
+  const [sessionLoading, setSessionLoading] = useState(true);
+
+  // Ripristina sessione al ricaricamento pagina
+  useEffect(() => {
+    const restoreSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          // Prova prima come autista
+          const { data: drv } = await supabase
+            .from('drivers')
+            .select('*, company:companies(*)')
+            .eq('auth_id', session.user.id)
+            .single();
+          if (drv) {
+            const d = { ...drv, companyId: drv.company_id, photoUrl: drv.photo_url,
+              avatar: drv.name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2) };
+            setDriver(d); setPage('driver-dash');
+          } else {
+            // Altrimenti è un passeggero
+            const { data: profile } = await supabase
+              .from('users').select('*').eq('id', session.user.id).single();
+            if (profile) {
+              const u = { id: session.user.id, name: profile.name, email: session.user.email,
+                avatar: profile.name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2) };
+              setUser(u); setPage('user-dash');
+            }
+          }
+        }
+      } catch(e) {
+        console.error('Errore ripristino sessione:', e);
+      } finally {
+        setSessionLoading(false);
+      }
+    };
+    restoreSession();
+
+    // Ascolta cambiamenti sessione (login/logout)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {});
+    return () => subscription.unsubscribe();
+  }, []);
 
   const handleLogin = (u, d) => {
     setUser(u); setDriver(d);
@@ -3716,10 +3872,20 @@ function App() {
     else if (u) setPage('user-dash');
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     setUser(null); setDriver(null); setPage('home');
     setToast({ msg:'Arrivederci! A presto 👋', type:'success' });
   };
+
+  // Mostra schermata di caricamento mentre ripristina la sessione
+  if (sessionLoading) return (
+    <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',flexDirection:'column',gap:16}}>
+      <div style={{fontSize:48}}>🚛</div>
+      <div style={{fontFamily:'Righteous',fontSize:24,color:'var(--ocean)'}}>Pick Up!</div>
+      <div style={{color:'var(--ink-soft)',fontSize:14}}>Caricamento...</div>
+    </div>
+  );
 
   return (
     <div>
