@@ -2334,7 +2334,7 @@ function AuthModal({ mode:initMode, onClose, onLogin }) {
 }
 
 function TripCard({ trip, onClick }) {
-  const driver = getDriver(trip.driverId);
+  const driver = trip.driver || trip._driver || { name:'Autista', rating:5.0, experience:1, truck:'Camion', plate:'', avatar:'A', prefs:{}, id: trip.driverId };
   const company = driver ? getCompany(driver.companyId) : null;
   const pct = ((trip.seats-trip.seatsLeft)/trip.seats)*100;
   const isFull = trip.seatsLeft===0;
@@ -2384,7 +2384,7 @@ function TripCard({ trip, onClick }) {
         {driver && (
           <div style={{display:'flex',gap:6,flexWrap:'wrap',marginTop:10}}>
             {DRIVER_PREFS_DEF.slice(0,5).map(p => (
-              <span key={p.key} title={p.desc} style={{fontSize:16, opacity: driver.prefs[p.key] ? 1 : 0.25}}>{p.emoji}</span>
+              <span key={p.key} title={p.desc} style={{fontSize:16, opacity: (driver.prefs || {})[p.key] ? 1 : 0.25}}>{p.emoji}</span>
             ))}
           </div>
         )}
@@ -2403,7 +2403,7 @@ function BookingModal({ trip, user, onClose, onBook }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [prefAck, setPrefAck] = useState(false);
-  const driver = getDriver(trip.driverId);
+  const driver = trip.driver || trip._driver || { name:'Autista', rating:5.0, experience:1, truck:'Camion', plate:'', avatar:'A', prefs:{}, id: trip.driverId };
   const company = driver ? getCompany(driver.companyId) : null;
   const total = seats * trip.price;
 
@@ -2545,7 +2545,7 @@ function BookingModal({ trip, user, onClose, onBook }) {
                   </div>
                   <div className="prefs-grid">
                     {DRIVER_PREFS_DEF.map(p => {
-                      const val = driver.prefs[p.key];
+                      const val = (driver.prefs || {})[p.key];
                       return (
                         <div key={p.key} className={`pref-card ${val?'selected':'refused'}`} title={p.desc}>
                           <span className="pref-emoji">{p.emoji}</span>
@@ -2636,7 +2636,7 @@ function BookingModalFixed({ trip, user, onClose, onBook }) {
   const [phase, setPhase] = useState('info'); // info | prefs | pay | done
   const [loading, setLoading] = useState(false);
   const [prefAck, setPrefAck] = useState(false);
-  const driver = getDriver(trip.driverId);
+  const driver = trip.driver || trip._driver || { name:'Autista', rating:5.0, experience:1, truck:'Camion', plate:'', avatar:'A', prefs:{}, id: trip.driverId };
   const company = driver ? getCompany(driver.companyId) : null;
   const total = seats * trip.price;
   const code = '#PU-' + Math.random().toString(36).substr(2,8).toUpperCase();
@@ -2788,7 +2788,7 @@ function BookingModalFixed({ trip, user, onClose, onBook }) {
                   <div style={{fontSize:11,fontWeight:800,letterSpacing:1.2,textTransform:'uppercase',color:'var(--ink-soft)',marginBottom:10}}>Regole a Bordo</div>
                   <div className="prefs-grid">
                     {DRIVER_PREFS_DEF.map(p => {
-                      const val = driver.prefs[p.key];
+                      const val = (driver.prefs || {})[p.key];
                       return (
                         <div key={p.key} className={`pref-card ${val?'selected':'refused'}`} title={p.desc}>
                           <span className="pref-emoji">{p.emoji}</span>
@@ -2885,7 +2885,7 @@ function BookingModalFixed({ trip, user, onClose, onBook }) {
 }
 
 function TripDetailModal({ trip, user, onClose, onBookOpen }) {
-  const driver = getDriver(trip.driverId);
+  const driver = trip.driver || trip._driver || { name:'Autista', rating:5.0, experience:1, truck:'Camion', plate:'', avatar:'A', prefs:{}, id: trip.driverId };
   const company = driver ? getCompany(driver.companyId) : null;
   const duration = calcDuration(trip.departure, trip.arrival) || calcDurationFromKm(trip.distance);
   return (
@@ -3345,7 +3345,7 @@ function DriverDashboard({ driver }) {
   const upNt = k => e => setNt(f=>({...f,[k]:e.target.value}));
 
   // Editable prefs
-  const [driverPrefs, setDriverPrefs] = useState({...driver.prefs});
+  const [driverPrefs, setDriverPrefs] = useState({...(driver.prefs || {})});
   const togglePref = k => setDriverPrefs(p=>({...p,[k]:!p[k]}));
 
   // Photo management
@@ -3553,7 +3553,7 @@ function DriverDashboard({ driver }) {
                 </div>
                 <div className="divider"></div>
                 <div style={{display:'flex',gap:12}}>
-                  <button className="btn btn-ghost" onClick={()=>setDriverPrefs({...driver.prefs})}>Annulla</button>
+                  <button className="btn btn-ghost" onClick={()=>setDriverPrefs({...(driver.prefs || {})})}>Annulla</button>
                   <button className="btn btn-primary" onClick={savePrefs}>Salva Preferenze ✓</button>
                 </div>
               </div></div>
