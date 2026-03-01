@@ -1778,6 +1778,19 @@ const dbGetCompanies = async () => {
   return data || [];
 };
 
+// Manda email di conferma prenotazione via Supabase Edge Function
+const sendBookingEmail = async ({ passengerEmail, passengerName, driverName, driverPhone, fromCity, toCity, departure, meetingPoint, seats, total, bookingId }) => {
+  try {
+    await fetch('https://zopxjzmjflikvecsquth.supabase.co/functions/v1/send-booking-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_KEY}` },
+      body: JSON.stringify({ passengerEmail, passengerName, driverName, driverPhone, fromCity, toCity, departure, meetingPoint, seats, total, bookingId }),
+    });
+  } catch(e) {
+    console.warn('Email non inviata:', e); // non bloccare la prenotazione se email fallisce
+  }
+};
+
 // Cancella una prenotazione
 const dbCancelBooking = async (bookingId, tripId, seats) => {
   // Aggiorna stato booking
@@ -3161,11 +3174,26 @@ function TripsPage({ user, onLoginOpen }) {
   const handleBook = async (trip, seats) => {
     if (!user) { onLoginOpen('login'); return; }
     try {
-      await dbBookTrip(user.id, trip.id, seats, seats * trip.price);
+      const booking = await dbBookTrip(user.id, trip.id, seats, seats * trip.price);
       // Aggiorna seats_left localmente
       setTrips(ts => ts.map(t => t.id === trip.id ? { ...t, seatsLeft: t.seatsLeft - seats } : t));
       setBookTrip(null); setSelTrip(null);
-      setToast({ msg:'Prenotazione confermata! Buon viaggio 🚛', type:'success' });
+      setToast({ msg:'Prenotazione confermata! Controlla la tua email 📧', type:'success' });
+      // Manda email di conferma (in background, non blocca UI)
+      const drv = trip.driver || {};
+      sendBookingEmail({
+        passengerEmail: user.email,
+        passengerName: user.name,
+        driverName: drv.name || 'Autista',
+        driverPhone: drv.phone || null,
+        fromCity: trip.from_city || trip.from,
+        toCity: trip.to_city || trip.to,
+        departure: trip.departure,
+        meetingPoint: trip.meeting_point || '',
+        seats,
+        total: seats * trip.price,
+        bookingId: booking?.id || Date.now().toString(),
+      });
     } catch(e) {
       setToast({ msg: e.message || 'Errore nella prenotazione', type:'error' });
     }
