@@ -3548,6 +3548,7 @@ function DriverDashboard({ driver }) {
           {id:'bookings', icon:'🎫', label:'Prenotazioni'},
           {id:'prefs',    icon:'⚙️', label:'Preferenze Bordo'},
           {id:'foto',     icon:'📷', label:'Foto Profilo'},
+          {id:'verifica', icon:'🛡️', label:'Verifica Identità'},
           {id:'truck',    icon:'🚛', label:'Il Mio Camion'},
         ].map(item=>(
           <div key={item.id} className={`sidebar-item ${view===item.id?'active':''}`} onClick={()=>setView(item.id)}>
@@ -3761,7 +3762,9 @@ function DriverDashboard({ driver }) {
             </div>
           </>
         )}
-
+        {view==='verifica' && (
+        <VerificationView driver={driver} onToast={setToast}/>
+        )}
         {view==='truck' && (
           <>
             <div className="page-title" style={{marginBottom:24}}>Il Mio <span className="accent">Camion</span></div>
