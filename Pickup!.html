@@ -1161,8 +1161,8 @@ const { useState, useEffect, useRef } = React;
 // ─── SUPABASE CLIENT ─────────────────────────────────────────────────────────
 // ⚠️  SOSTITUISCI i due valori qui sotto con quelli del tuo progetto Supabase
 //    Li trovi su: supabase.com → tuo progetto → Settings → API
-const SUPABASE_URL = 'https://zopxjzmjflikvecsquth.supabase.co';   // es. https://xyzxyz.supabase.co
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpvcHhqem1qZmxpa3ZlY3NxdXRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIyMDA2NzMsImV4cCI6MjA4Nzc3NjY3M30.61PfT0u6xiYyutLk18XJ_lY1C9xdXjZ6WvA0ii4e7Kw';       // chiave pubblica (anon/public)
+const SUPABASE_URL = 'INCOLLA_QUI_IL_TUO_PROJECT_URL';   // es. https://xyzxyz.supabase.co
+const SUPABASE_KEY = 'INCOLLA_QUI_LA_TUA_ANON_KEY';       // chiave pubblica (anon/public)
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 /*
@@ -1778,6 +1778,48 @@ const dbGetCompanies = async () => {
   return data || [];
 };
 
+// Carica documento di verifica su Supabase Storage
+const dbUploadDocument = async (driverId, file) => {
+  const ext = file.name.split('.').pop().toLowerCase();
+  const path = `${driverId}/document_${Date.now()}.${ext}`;
+  const { data, error } = await supabase.storage.from('documents').upload(path, file, { upsert: true });
+  if (error) throw error;
+  // Ottieni URL firmato (valido 1 ora - per uso admin)
+  const { data: urlData } = await supabase.storage.from('documents').createSignedUrl(path, 3600);
+  return urlData?.signedUrl || path;
+};
+
+// Richiedi verifica identità
+const dbRequestVerification = async (driverId, documentUrl) => {
+  // Salva documento nella tabella verifications
+  const { error: e1 } = await supabase.from('verifications').insert({
+    driver_id: driverId, document_url: documentUrl, status: 'pending'
+  });
+  if (e1) throw e1;
+  // Aggiorna stato autista
+  const { error: e2 } = await supabase.from('drivers')
+    .update({ verification_status: 'pending' }).eq('id', driverId);
+  if (e2) throw e2;
+};
+
+// Admin: approva o rifiuta verifica
+const dbReviewVerification = async (driverId, approved, notes='') => {
+  const status = approved ? 'verified' : 'rejected';
+  await supabase.from('drivers').update({ verified: approved, verification_status: status }).eq('id', driverId);
+  await supabase.from('verifications').update({ status, notes, reviewed_at: new Date().toISOString() }).eq('driver_id', driverId).eq('status', 'pending');
+};
+
+// Admin: carica tutti gli autisti in attesa di verifica
+const dbGetPendingVerifications = async () => {
+  const { data, error } = await supabase
+    .from('verifications')
+    .select('*, driver:drivers(*, company:companies(*))')
+    .eq('status', 'pending')
+    .order('created_at', { ascending: true });
+  if (error) { console.error(error); return []; }
+  return data || [];
+};
+
 // Manda email di conferma prenotazione via Supabase Edge Function
 const sendBookingEmail = async ({ passengerEmail, passengerName, driverName, driverPhone, fromCity, toCity, departure, meetingPoint, seats, total, bookingId }) => {
   try {
@@ -1983,9 +2025,6 @@ function Nav({ user, driver, onLoginOpen, onLogout, onNavigate, currentPage }) {
       <div className="nav-actions">
         {!isIn ? (
           <>
-            {user?.email===ADMIN_EMAIL && (
-  <button className="btn btn-ghost btn-sm" onClick={()=>onNavigate('admin')}>⚙️ Admin</button>
-)}
             <button className="btn btn-ghost btn-sm" onClick={()=>onLoginOpen('login')}>Accedi</button>
             <button className="btn btn-primary btn-sm" onClick={()=>onLoginOpen('register')}>Registrati 🎉</button>
           </>
@@ -1999,7 +2038,6 @@ function Nav({ user, driver, onLoginOpen, onLogout, onNavigate, currentPage }) {
               )}
               <span style={{fontSize:14,fontWeight:700,color:'var(--ink)'}}>{name?.split(' ')[0]}</span>
               {driver && <span className="badge badge-coral" style={{fontSize:10}}>🚛 Autista</span>}
-              {driver?.verified && <span style={{background:'#2aad74',color:'white',fontSize:11,fontWeight:800,padding:'2px 8px',borderRadius:20,marginLeft:4}}>✓ Verificato</span>}
             </div>
             <button className="btn btn-ghost btn-sm" onClick={onLogout}>Esci</button>
           </>
@@ -2410,7 +2448,7 @@ function TripCard({ trip, onClick }) {
           <div className="driver-strip">
             <DriverPhoto driver={driver} size={30}/>
             <div style={{flex:1}}>
-              <span style={{fontWeight:700,fontSize:13,color:'var(--ink)'}}>{driver.name}{driver.verified && <span style={{background:'#2aad74',color:'white',fontSize:11,fontWeight:800,padding:'2px 8px',borderRadius:20,marginLeft:8}}>✓ Verificato</span>}</span>
+              <span style={{fontWeight:700,fontSize:13,color:'var(--ink)'}}>{driver.name}</span>
               <span style={{marginLeft:8}} className="company-badge">🏢 {company?.name}</span>
             </div>
             <span style={{fontSize:13,fontWeight:800,color:'#a07600'}}>★ {driver.rating}</span>
@@ -2559,7 +2597,7 @@ function BookingModal({ trip, user, onClose, onBook }) {
                     <div style={{display:'flex',gap:14,alignItems:'flex-start',marginBottom:16}}>
                       <div className="avatar avatar-driver avatar-lg">{driver.avatar}</div>
                       <div>
-                        <div style={{fontWeight:800,fontSize:17,color:'var(--ink)',marginBottom:4}}>{driver.name}{driver.verified && <span style={{background:'#2aad74',color:'white',fontSize:11,fontWeight:800,padding:'2px 8px',borderRadius:20,marginLeft:8}}>✓ Verificato</span>}</div>
+                        <div style={{fontWeight:800,fontSize:17,color:'var(--ink)',marginBottom:4}}>{driver.name}</div>
                         <div style={{fontSize:12,color:'var(--ink-soft)',marginBottom:6}}>🚛 {driver.truck} · {driver.plate}</div>
                         <div className="company-badge">🏢 {company?.name}</div>
                         <div style={{marginTop:8,display:'flex',gap:12}}>
@@ -2807,7 +2845,7 @@ function BookingModalFixed({ trip, user, onClose, onBook }) {
                     <div style={{display:'flex',gap:12,marginBottom:14}}>
                       <DriverPhoto driver={driver} size={64}/>
                       <div>
-                        <div style={{fontWeight:800,fontSize:16,color:'var(--ink)',marginBottom:3}}>{driver.name}{driver.verified && <span style={{background:'#2aad74',color:'white',fontSize:11,fontWeight:800,padding:'2px 8px',borderRadius:20,marginLeft:8}}>✓ Verificato</span>}</div>
+                        <div style={{fontWeight:800,fontSize:16,color:'var(--ink)',marginBottom:3}}>{driver.name}</div>
                         <div style={{fontSize:12,color:'var(--ink-soft)',marginBottom:6}}>🚛 {driver.truck}</div>
                         <div style={{display:'flex',alignItems:'center',gap:8}}>
                           <span style={{fontSize:14,fontWeight:800,color:'#a07600'}}>★ {driver.rating}</span>
@@ -2976,7 +3014,7 @@ function TripDetailModal({ trip, user, onClose, onBookOpen }) {
                 <div style={{display:'flex',gap:12,marginBottom:12}}>
                   <div className="avatar avatar-driver avatar-lg">{driver.avatar}</div>
                   <div>
-                    <div style={{fontWeight:800,fontSize:15,marginBottom:3}}>{driver.name}{driver.verified && <span style={{background:'#2aad74',color:'white',fontSize:11,fontWeight:800,padding:'2px 8px',borderRadius:20,marginLeft:8}}>✓ Verificato</span>}</div>
+                    <div style={{fontWeight:800,fontSize:15,marginBottom:3}}>{driver.name}</div>
                     <div style={{fontSize:12,color:'var(--ink-soft)',marginBottom:6}}>🚛 {driver.truck} · {driver.plate}</div>
                     <div className="company-badge">🏢 {company?.name}</div>
                     <div style={{marginTop:6}}><span style={{fontSize:13,fontWeight:800,color:'#a07600'}}>★ {driver.rating}</span> <span style={{fontSize:12,color:'var(--ink-faint)',fontWeight:600}}>{driver.experience} anni</span></div>
@@ -3465,235 +3503,7 @@ function UserDashboard({ user, onNavigate }) {
     </div>
   );
 }
-  // ─── ADMIN PANEL ──────────────────────────────────────────────────────────────
-const ADMIN_EMAIL = 'METTI_QUI_LA_TUA_EMAIL@gmail.com';
 
-function AdminPanel({ user }) {
-  const [verifications, setVerifications] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState(null);
-
-  const load = async () => {
-    setLoading(true);
-    const data = await dbGetPendingVerifications();
-    setVerifications(data);
-    setLoading(false);
-  };
-
-  useEffect(() => { load(); }, []);
-
-  const handleReview = async (driverId, approved) => {
-    try {
-      await dbReviewVerification(driverId, approved);
-      setVerifications(prev => prev.filter(v => v.driver_id !== driverId));
-      setToast({msg: approved ? '✅ Autista verificato!' : '❌ Verifica rifiutata', type: approved ? 'success' : 'error'});
-    } catch(e) {
-      setToast({msg: 'Errore: ' + e.message, type:'error'});
-    }
-  };
-
-  return (
-    <div style={{maxWidth:900, margin:'80px auto', padding:'0 24px'}}>
-      {toast && <Toast {...toast} onClose={()=>setToast(null)}/>}
-      <div style={{background:'linear-gradient(135deg,#0d2340,#1a7fbf)', borderRadius:16, padding:32, marginBottom:32, color:'white'}}>
-        <div style={{fontSize:32, marginBottom:8}}>🛡️ Pannello Admin</div>
-        <div style={{opacity:0.8}}>Gestisci le verifiche identità degli autisti</div>
-      </div>
-
-      {loading ? (
-        <div style={{textAlign:'center', padding:40}}>⏳ Caricamento...</div>
-      ) : verifications.length === 0 ? (
-        <div style={{textAlign:'center', padding:60, background:'white', borderRadius:16, boxShadow:'0 2px 20px rgba(0,0,0,0.06)'}}>
-          <div style={{fontSize:48, marginBottom:16}}>✅</div>
-          <div style={{fontWeight:800, fontSize:20, color:'var(--ink)'}}>Nessuna verifica in attesa</div>
-          <div style={{color:'#718096', marginTop:8}}>Tutti gli autisti sono stati verificati!</div>
-        </div>
-      ) : (
-        <div style={{display:'flex', flexDirection:'column', gap:16}}>
-          {verifications.map(v => {
-            const drv = v.driver || {};
-            return (
-              <div key={v.id} className="card">
-                <div className="card-body">
-                  <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:16}}>
-                    <div style={{display:'flex', alignItems:'center', gap:12}}>
-                      <DriverPhoto driver={drv} size={52}/>
-                      <div>
-                        <div style={{fontWeight:900, fontSize:17}}>{drv.name}</div>
-                        <div style={{fontSize:13, color:'#718096'}}>{drv.email} · {drv.phone || 'No telefono'}</div>
-                        <div style={{fontSize:12, color:'#718096'}}>🚛 {drv.truck} · {drv.plate}</div>
-                      </div>
-                    </div>
-                    <div style={{fontSize:12, color:'#718096'}}>
-                      {new Date(v.created_at).toLocaleDateString('it-IT')}
-                    </div>
-                  </div>
-
-                  {/* Documento */}
-                  <div style={{marginBottom:16}}>
-                    <div style={{fontSize:12, fontWeight:800, color:'#718096', marginBottom:8}}>DOCUMENTO CARICATO</div>
-                    {v.document_url && v.document_url.includes('http') ? (
-                      v.document_url.includes('.pdf') ? (
-                        <a href={v.document_url} target="_blank" rel="noreferrer"
-                          style={{display:'inline-flex', alignItems:'center', gap:8, background:'#f7fafc',
-                          border:'1px solid #e2e8f0', borderRadius:8, padding:'8px 16px', textDecoration:'none', color:'var(--ocean)', fontWeight:700}}>
-                          📄 Apri PDF documento
-                        </a>
-                      ) : (
-                        <img src={v.document_url} alt="documento"
-                          style={{maxWidth:'100%', maxHeight:300, borderRadius:12, border:'1px solid #e2e8f0', cursor:'pointer'}}
-                          onClick={()=>window.open(v.document_url,'_blank')}/>
-                      )
-                    ) : (
-                      <div style={{color:'#718096', fontSize:13}}>⚠️ Documento non accessibile — l'URL potrebbe essere scaduto</div>
-                    )}
-                  </div>
-
-                  {/* Azioni */}
-                  <div style={{display:'flex', gap:12}}>
-                    <button className="btn btn-primary" onClick={()=>handleReview(v.driver_id, true)}
-                      style={{background:'linear-gradient(135deg,#2aad74,#22c55e)'}}>
-                      ✅ Approva — Verifica Autista
-                    </button>
-                    <button className="btn btn-ghost" onClick={()=>handleReview(v.driver_id, false)}
-                      style={{color:'#e05a3a', borderColor:'#fecaca'}}>
-                      ❌ Rifiuta documento
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-// ─── VERIFICATION VIEW ────────────────────────────────────────────────────────
-function VerificationView({ driver, onToast }) {
-  const [file, setFile] = useState(null);
-  const [preview, setPreview] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState(driver.verification_status || 'none');
-
-  const handleFile = (e) => {
-    const f = e.target.files[0];
-    if (!f) return;
-    const allowed = ['image/jpeg','image/png','application/pdf'];
-    if (!allowed.includes(f.type)) { onToast({msg:'Formato non valido. Usa JPG, PNG o PDF.', type:'error'}); return; }
-    if (f.size > 5 * 1024 * 1024) { onToast({msg:'File troppo grande. Max 5MB.', type:'error'}); return; }
-    setFile(f);
-    if (f.type !== 'application/pdf') {
-      const reader = new FileReader();
-      reader.onload = e => setPreview(e.target.result);
-      reader.readAsDataURL(f);
-    } else {
-      setPreview('pdf');
-    }
-  };
-
-  const handleSubmit = async () => {
-    if (!file) { onToast({msg:'Seleziona un documento prima.', type:'error'}); return; }
-    setLoading(true);
-    try {
-      const url = await dbUploadDocument(driver.id, file);
-      await dbRequestVerification(driver.id, url);
-      setStatus('pending');
-      onToast({msg:'Documento inviato! Verifica in corso entro 24h 🛡️', type:'success'});
-    } catch(e) {
-      onToast({msg: e.message || 'Errore nel caricamento.', type:'error'});
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const statusInfo = {
-    none:     { icon:'🛡️', color:'#718096', bg:'#f7fafc', title:'Non Verificato',    desc:'Carica un documento di identità per ottenere il badge verificato.' },
-    pending:  { icon:'⏳', color:'#b07a00', bg:'#fffbeb', title:'In Attesa',          desc:'Documento ricevuto. Lo stiamo verificando, ti notificheremo entro 24h.' },
-    verified: { icon:'✅', color:'#2aad74', bg:'#f0fff8', title:'Identità Verificata', desc:'Il tuo profilo mostra il badge verificato ai passeggeri.' },
-    rejected: { icon:'❌', color:'#e05a3a', bg:'#fff5f5', title:'Documento Rifiutato', desc:'Il documento non è stato accettato. Caricane uno nuovo leggibile.' },
-  };
-  const si = statusInfo[status] || statusInfo.none;
-
-  return (
-    <>
-      <div className="page-header">
-        <div className="page-title">Verifica <span className="accent">Identità</span></div>
-        <div className="page-sub">Il badge verificato aumenta le prenotazioni del 60%</div>
-      </div>
-
-      {/* Stato attuale */}
-      <div style={{background: si.bg, border:`2px solid ${si.color}30`, borderRadius:16, padding:24, marginBottom:24, display:'flex', alignItems:'center', gap:16}}>
-        <div style={{fontSize:40}}>{si.icon}</div>
-        <div>
-          <div style={{fontWeight:900, fontSize:18, color: si.color}}>{si.title}</div>
-          <div style={{fontSize:14, color:'#4a5568', marginTop:4}}>{si.desc}</div>
-        </div>
-      </div>
-
-      {/* Form upload - mostra solo se non verificato o rifiutato */}
-      {(status === 'none' || status === 'rejected') && (
-        <div className="card">
-          <div className="card-body">
-            <div style={{fontWeight:800, fontSize:16, marginBottom:16, color:'var(--ink)'}}>
-              📎 Carica Documento di Identità
-            </div>
-            <div style={{fontSize:13, color:'#718096', marginBottom:20, lineHeight:1.6}}>
-              Carica una foto o scansione di uno di questi documenti:<br/>
-              <strong>Patente di guida • Carta d'identità • Passaporto</strong><br/>
-              Formati accettati: JPG, PNG, PDF — Max 5MB
-            </div>
-
-            {/* Area upload */}
-            <label style={{display:'block', border:'2px dashed var(--ocean)', borderRadius:12, padding:32,
-              textAlign:'center', cursor:'pointer', background:'var(--sky)', marginBottom:16}}>
-              <input type="file" accept=".jpg,.jpeg,.png,.pdf" onChange={handleFile} style={{display:'none'}}/>
-              {preview ? (
-                preview === 'pdf' ? (
-                  <div style={{fontSize:48}}>📄<div style={{fontSize:14, marginTop:8, color:'var(--ocean)', fontWeight:700}}>PDF caricato ✓</div></div>
-                ) : (
-                  <img src={preview} style={{maxHeight:200, borderRadius:8, maxWidth:'100%'}} alt="preview"/>
-                )
-              ) : (
-                <>
-                  <div style={{fontSize:40, marginBottom:8}}>📷</div>
-                  <div style={{fontWeight:700, color:'var(--ocean)'}}>Clicca per selezionare il file</div>
-                  <div style={{fontSize:12, color:'#718096', marginTop:4}}>oppure trascina qui il documento</div>
-                </>
-              )}
-            </label>
-
-            {file && (
-              <div style={{fontSize:13, color:'var(--ink-soft)', marginBottom:16}}>
-                File selezionato: <strong>{file.name}</strong> ({(file.size/1024/1024).toFixed(2)} MB)
-              </div>
-            )}
-
-            <button className="btn btn-primary btn-lg" onClick={handleSubmit} disabled={loading || !file}>
-              {loading ? '⏳ Caricamento...' : '🛡️ Invia per Verifica'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Info badge */}
-      {status === 'verified' && (
-        <div style={{background:'linear-gradient(135deg,#0d2340,#1a7fbf)', borderRadius:16, padding:24, color:'white', textAlign:'center'}}>
-          <div style={{fontSize:48, marginBottom:8}}>✅</div>
-          <div style={{fontWeight:900, fontSize:20, marginBottom:8}}>Sei un Autista Verificato!</div>
-          <div style={{opacity:0.8, fontSize:14}}>Il badge appare sul tuo profilo e aumenta la fiducia dei passeggeri.</div>
-        </div>
-      )}
-    </>
-  );
-}
-```
-
----
-
-Poi cerca questa riga:
-```
-// ─── APP ──────────────────────────────────────────────────────────────────────
 // ─── DRIVER DASHBOARD ─────────────────────────────────────────────────────────
 
 function DriverDashboard({ driver }) {
@@ -3768,7 +3578,7 @@ function DriverDashboard({ driver }) {
               }}
             >✏️</button>
           </div>
-          <div style={{fontWeight:800,fontSize:15,color:'var(--ink)'}}>{driver.name}{driver.verified && <span style={{background:'#2aad74',color:'white',fontSize:11,fontWeight:800,padding:'2px 8px',borderRadius:20,marginLeft:8}}>✓ Verificato</span>}</div>
+          <div style={{fontWeight:800,fontSize:15,color:'var(--ink)'}}>{driver.name}</div>
           <div style={{fontSize:12,color:'var(--ink-faint)',marginTop:2,fontWeight:600}}>{driver.truck}</div>
           <div className="company-badge" style={{marginTop:8}}>🏢 {company?.name}</div>
         </div>
@@ -3961,7 +3771,7 @@ function DriverDashboard({ driver }) {
                   <div style={{display:'flex',gap:16,alignItems:'flex-start',marginBottom:16}}>
                     <DriverPhoto driver={{...driver, photoUrl: driver.photoUrl}} size={80}/>
                     <div>
-                      <div style={{fontWeight:800,fontSize:17,color:'var(--ink)',marginBottom:3}}>{driver.name}{driver.verified && <span style={{background:'#2aad74',color:'white',fontSize:11,fontWeight:800,padding:'2px 8px',borderRadius:20,marginLeft:8}}>✓ Verificato</span>}</div>
+                      <div style={{fontWeight:800,fontSize:17,color:'var(--ink)',marginBottom:3}}>{driver.name}</div>
                       <div style={{fontSize:12,color:'var(--ink-soft)',marginBottom:6}}>🚛 {driver.truck}</div>
                       <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
                         <div className="company-badge">🏢 {company?.name}</div>
@@ -3994,9 +3804,7 @@ function DriverDashboard({ driver }) {
             </div>
           </>
         )}
-        {view==='verifica' && (
-        <VerificationView driver={driver} onToast={setToast}/>
-        )}
+
         {view==='truck' && (
           <>
             <div className="page-title" style={{marginBottom:24}}>Il Mio <span className="accent">Camion</span></div>
@@ -4166,7 +3974,6 @@ function App() {
         </div>
       )}
       {authModal && <AuthModal mode={authModal} onClose={()=>setAuthModal(null)} onLogin={handleLogin}/>}
-      {page==='admin' && user?.email===ADMIN_EMAIL && <AdminPanel user={user}/>}
     </div>
   );
 }
