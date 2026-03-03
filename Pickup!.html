@@ -1993,7 +1993,7 @@ function Nav({ user, driver, onLoginOpen, onLogout, onNavigate, currentPage }) {
           <>
             <div style={{display:'flex',alignItems:'center',gap:10}}>
               {driver && driverPhoto ? (
-                <img src={driverPhoto} alt={driver.name}{driver.verified && <span style={{background:'#2aad74',color:'white',fontSize:11,fontWeight:800,padding:'2px 8px',borderRadius:20,marginLeft:8}}>✓ Verificato</span>} className="nav-driver-photo"/>
+                <img src={driverPhoto} alt={driver.name} className="nav-driver-photo"/>
               ) : (
                 <div className={`avatar ${driver?'avatar-driver':''}`}>{initials}</div>
               )}
