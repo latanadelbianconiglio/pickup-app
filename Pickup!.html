@@ -1999,6 +1999,7 @@ function Nav({ user, driver, onLoginOpen, onLogout, onNavigate, currentPage }) {
               )}
               <span style={{fontSize:14,fontWeight:700,color:'var(--ink)'}}>{name?.split(' ')[0]}</span>
               {driver && <span className="badge badge-coral" style={{fontSize:10}}>🚛 Autista</span>}
+              {driver?.verified && <span style={{background:'#2aad74',color:'white',fontSize:11,fontWeight:800,padding:'2px 8px',borderRadius:20,marginLeft:4}}>✓ Verificato</span>}
             </div>
             <button className="btn btn-ghost btn-sm" onClick={onLogout}>Esci</button>
           </>
