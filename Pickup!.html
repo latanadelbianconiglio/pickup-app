@@ -2597,9 +2597,12 @@ function BookingModal({ trip, user, onClose, onBook }) {
                   <div style={{fontSize:12,fontWeight:800,letterSpacing:1,textTransform:'uppercase',color:'var(--ink-soft)',marginBottom:10}}>Il Tuo Autista</div>
                   <div style={{background:'linear-gradient(135deg,var(--sky),#d0eeff)',borderRadius:16,padding:20,border:'1.5px solid var(--border)'}}>
                     <div style={{display:'flex',gap:14,alignItems:'flex-start',marginBottom:16}}>
-                      <div className="avatar avatar-driver avatar-lg">{driver.avatar}</div>
+                      <DriverPhoto driver={driver} size={64}/>
                       <div>
-                        <div style={{fontWeight:800,fontSize:17,color:'var(--ink)',marginBottom:4}}>{driver.name}</div>
+                        <div style={{fontWeight:800,fontSize:17,color:'var(--ink)',marginBottom:4}}>
+                          {driver.name}
+                          {driver.verified && <span style={{background:'#2aad74',color:'white',fontSize:11,fontWeight:800,padding:'2px 8px',borderRadius:20,marginLeft:8}}>✓ Verificato</span>}
+                        </div>
                         <div style={{fontSize:12,color:'var(--ink-soft)',marginBottom:6}}>🚛 {driver.truck} · {driver.plate}</div>
                         <div className="company-badge">🏢 {company?.name}</div>
                         <div style={{marginTop:8,display:'flex',gap:12}}>
@@ -3988,7 +3991,7 @@ function VerificationView({ driver, onToast }) {
 }
 
 // ─── ADMIN PANEL ──────────────────────────────────────────────────────────────
-const ADMIN_EMAIL = 'METTI_QUI_LA_TUA_EMAIL';
+const ADMIN_EMAIL = 'benozziluca09@gmail.com';
 
 function AdminPanel({ user }) {
   const [verifications, setVerifications] = React.useState([]);
@@ -4106,10 +4109,8 @@ function App() {
             .eq('auth_id', session.user.id)
             .single();
           if (drv) {
-            console.log('Driver from DB:', drv.verified, drv.verification_status);
             const d = { ...drv, companyId: drv.company_id, photoUrl: drv.photo_url, verified: drv.verified, verification_status: drv.verification_status,
               avatar: drv.name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2) };
-            console.log('Driver object:', d.verified);
             setDriver(d); setPage('driver-dash');
           } else {
             // Altrimenti è un passeggero
