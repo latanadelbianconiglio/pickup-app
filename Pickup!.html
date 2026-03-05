@@ -4106,8 +4106,10 @@ function App() {
             .eq('auth_id', session.user.id)
             .single();
           if (drv) {
+            console.log('Driver from DB:', drv.verified, drv.verification_status);
             const d = { ...drv, companyId: drv.company_id, photoUrl: drv.photo_url, verified: drv.verified, verification_status: drv.verification_status,
               avatar: drv.name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2) };
+            console.log('Driver object:', d.verified);
             setDriver(d); setPage('driver-dash');
           } else {
             // Altrimenti è un passeggero
