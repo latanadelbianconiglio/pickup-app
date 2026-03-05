@@ -2964,6 +2964,7 @@ function BookingModalFixed({ trip, user, onClose, onBook }) {
 }
 
 function TripDetailModal({ trip, user, onClose, onBookOpen }) {
+  if (trip.driver) console.log("Trip driver verified:", trip.driver.verified, trip.driver.name);
   const driver = trip.driver || trip._driver || { name:'Autista', rating:5.0, experience:1, truck:'Camion', plate:'', avatar:'A', prefs:{}, id: trip.driverId };
   const company = driver ? getCompany(driver.companyId) : null;
   const duration = calcDuration(trip.departure, trip.arrival) || calcDurationFromKm(trip.distance);
