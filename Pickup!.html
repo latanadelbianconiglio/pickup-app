@@ -2038,6 +2038,7 @@ function Nav({ user, driver, onLoginOpen, onLogout, onNavigate, currentPage }) {
               )}
               <span style={{fontSize:14,fontWeight:700,color:'var(--ink)'}}>{name?.split(' ')[0]}</span>
               {driver && <span className="badge badge-coral" style={{fontSize:10}}>🚛 Autista</span>}
+            {driver?.verified && <span style={{background:'#2aad74',color:'white',fontSize:11,fontWeight:800,padding:'2px 8px',borderRadius:20,marginLeft:4}}>✓ Verificato</span>}
             </div>
             {user?.email===ADMIN_EMAIL && <button className="btn btn-ghost btn-sm" onClick={()=>onNavigate('admin')}>⚙️ Admin</button>}
             <button className="btn btn-ghost btn-sm" onClick={onLogout}>Esci</button>
@@ -2095,7 +2096,7 @@ function AuthModal({ mode:initMode, onClose, onLogin }) {
         // Leggi profilo autista
         const { data: drv, error: de } = await supabase.from('drivers').select('*, company:companies(*)').eq('auth_id', data.user.id).single();
         if (de || !drv) { setErr('Profilo autista non trovato. Usa "Registrati".'); return; }
-        onLogin(null, { ...drv, avatar: drv.name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2) }); onClose(); return;
+        onLogin(null, { ...drv, companyId: drv.company_id, photoUrl: drv.photo_url, avatar: drv.name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2) }); onClose(); return;
       }
       if (mode==='register') {
         // Registrazione passeggero
@@ -3987,7 +3988,7 @@ function VerificationView({ driver, onToast }) {
 }
 
 // ─── ADMIN PANEL ──────────────────────────────────────────────────────────────
-const ADMIN_EMAIL = 'benozziluca09@gmail.com';
+const ADMIN_EMAIL = 'METTI_QUI_LA_TUA_EMAIL';
 
 function AdminPanel({ user }) {
   const [verifications, setVerifications] = React.useState([]);
@@ -4105,7 +4106,7 @@ function App() {
             .eq('auth_id', session.user.id)
             .single();
           if (drv) {
-            const d = { ...drv, companyId: drv.company_id, photoUrl: drv.photo_url,
+            const d = { ...drv, companyId: drv.company_id, photoUrl: drv.photo_url, verified: drv.verified, verification_status: drv.verification_status,
               avatar: drv.name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2) };
             setDriver(d); setPage('driver-dash');
           } else {
