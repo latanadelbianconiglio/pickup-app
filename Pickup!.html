@@ -3806,6 +3806,9 @@ function DriverDashboard({ driver }) {
           </>
         )}
 
+        {view==='verifica' && (
+          <VerificationView driver={driver} onToast={setToast}/>
+        )}
         {view==='truck' && (
           <>
             <div className="page-title" style={{marginBottom:24}}>Il Mio <span className="accent">Camion</span></div>
