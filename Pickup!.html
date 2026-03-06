@@ -2602,7 +2602,7 @@ function BookingModal({ trip, user, onClose, onBook }) {
                       <div>
                         <div style={{fontWeight:800,fontSize:17,color:'var(--ink)',marginBottom:4}}>
                           {driver.name}
-                          {(driver.verified === true || driver.verified === 'true') && <span style={{background:'#2aad74',color:'white',fontSize:11,fontWeight:800,padding:'2px 8px',borderRadius:20,marginLeft:8}}>✓ Verificato</span>}
+                          {(driver.verified || driver.verification_status === 'verified') && <span style={{background:'#2aad74',color:'white',fontSize:11,fontWeight:800,padding:'2px 8px',borderRadius:20,marginLeft:8}}>✓ Verificato</span>}
                         </div>
                         <div style={{fontSize:12,color:'var(--ink-soft)',marginBottom:6}}>🚛 {driver.truck} · {driver.plate}</div>
                         <div className="company-badge">🏢 {company?.name}</div>
