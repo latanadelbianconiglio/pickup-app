@@ -2602,7 +2602,7 @@ function BookingModal({ trip, user, onClose, onBook }) {
                       <div>
                         <div style={{fontWeight:800,fontSize:17,color:'var(--ink)',marginBottom:4}}>
                           {driver.name}
-                          {driver.verified && <span style={{background:'#2aad74',color:'white',fontSize:11,fontWeight:800,padding:'2px 8px',borderRadius:20,marginLeft:8}}>✓ Verificato</span>}
+                          {!!(driver.verified || driver.verification_status === 'verified') && <span style={{background:'#2aad74',color:'white',fontSize:11,fontWeight:800,padding:'2px 8px',borderRadius:20,marginLeft:8}}>✓ Verificato</span>}
                         </div>
                         <div style={{fontSize:12,color:'var(--ink-soft)',marginBottom:6}}>🚛 {driver.truck} · {driver.plate}</div>
                         <div className="company-badge">🏢 {company?.name}</div>
@@ -2965,9 +2965,7 @@ function BookingModalFixed({ trip, user, onClose, onBook }) {
 }
 
 function TripDetailModal({ trip, user, onClose, onBookOpen }) {
-  const rawDriver = trip.driver || trip._driver || {};
-  console.log('rawDriver:', JSON.stringify(rawDriver));
-  const driver = { name:'Autista', rating:5.0, experience:1, truck:'Camion', plate:'', avatar:'A', prefs:{}, id: trip.driverId, ...rawDriver, verified: rawDriver.verified === true || rawDriver.verified === 'true' || rawDriver.verification_status === 'verified' };
+  const driver = trip.driver || trip._driver || { name:'Autista', rating:5.0, experience:1, truck:'Camion', plate:'', avatar:'A', prefs:{}, id: trip.driverId };
   const company = driver ? getCompany(driver.companyId) : null;
   const duration = calcDuration(trip.departure, trip.arrival) || calcDurationFromKm(trip.distance);
   return (
