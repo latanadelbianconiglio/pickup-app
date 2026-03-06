@@ -1708,6 +1708,7 @@ const dbGetTrips = async (filters={}) => {
   if (filters.date) q = q.gte('departure', filters.date).lt('departure', filters.date + 'T23:59:59');
   const { data, error } = await q;
   if (error) { console.error(error); return []; }
+  if (data?.[0]?.driver) console.log('Driver fields:', JSON.stringify(data[0].driver));
   // Normalizza i campi per compatibilità con il resto dell'app
   return (data || []).map(t => ({
     ...t,
