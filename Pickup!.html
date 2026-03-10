@@ -6,7 +6,7 @@
 <title>Pick Up! — Sali a Bordo</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js?v=2"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Righteous&family=Nunito:wght@400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -1161,6 +1161,7 @@ const { useState, useEffect, useRef } = React;
 // ─── SUPABASE CLIENT ─────────────────────────────────────────────────────────
 // ⚠️  SOSTITUISCI i due valori qui sotto con quelli del tuo progetto Supabase
 //    Li trovi su: supabase.com → tuo progetto → Settings → API
+// v2
 const SUPABASE_URL = 'https://zopxjzmjflikvecsquth.supabase.co';   // es. https://xyzxyz.supabase.co
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpvcHhqem1qZmxpa3ZlY3NxdXRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIyMDA2NzMsImV4cCI6MjA4Nzc3NjY3M30.61PfT0u6xiYyutLk18XJ_lY1C9xdXjZ6WvA0ii4e7Kw';       // chiave pubblica (anon/public)
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
