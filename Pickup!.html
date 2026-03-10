@@ -1849,6 +1849,29 @@ const dbCancelBooking = async (bookingId, tripId, seats) => {
 
 // Helper: restituisce profilo autista completo dal DB
 
+// ─── DRIVER BOOKINGS ─────────────────────────────────────────────────────────
+const dbGetDriverBookings = async (driverId) => {
+  // Prima prendi i trip_id dell'autista
+  const { data: trips } = await supabase
+    .from('trips').select('id').eq('driver_id', driverId);
+  if (!trips?.length) return [];
+  const tripIds = trips.map(t => t.id);
+  const { data, error } = await supabase
+    .from('bookings')
+    .select('*, trip:trips(*), user:users(name, email)')
+    .in('trip_id', tripIds)
+    .eq('status', 'confirmed')
+    .order('created_at', { ascending: false });
+  if (error) { console.error(error); return []; }
+  return (data || []).map(b => ({
+    ...b,
+    tripId: b.trip_id,
+    total: b.total_price,
+    createdAt: b.created_at,
+    userName: b.user?.name || 'Passeggero',
+  }));
+};
+
 // ─── CHAT FUNCTIONS ───────────────────────────────────────────────────────────
 const dbGetMessages = async (bookingId) => {
   const { data, error } = await supabase
@@ -3611,6 +3634,7 @@ function DriverDashboard({ driver }) {
 
   useEffect(() => {
     dbGetDriverTrips(driver.id).then(data => { setMyTrips(data); setLoadingTrips(false); });
+    dbGetDriverBookings(driver.id).then(data => setMyBookings(data));
   }, [driver.id]);
 
   const [nt, setNt] = useState({ from:'', to:'', date:'', time:'09:00', seats:4, price:30, notes:'' });
@@ -3784,11 +3808,10 @@ function DriverDashboard({ driver }) {
                   {myBookings.length===0 ? (
                     <tr><td colSpan={7} style={{textAlign:'center',padding:40,color:'var(--ink-faint)'}}>Nessuna prenotazione ancora</td></tr>
                   ) : myBookings.map(b=>{
-                    const t=getTrip(b.tripId);
                     return (
                       <tr key={b.id}>
-                        <td className="mono" style={{color:'var(--ink-faint)'}}>#{b.id}</td>
-                        <td><strong style={{color:'var(--ink)'}}>{t?.from} → {t?.to}</strong></td>
+                        <td className="mono" style={{color:'var(--ink-faint)'}}>#{b.id?.slice(-6).toUpperCase()}</td>
+                        <td><strong style={{color:'var(--ink)'}}>{b.trip?.from_city} → {b.trip?.to_city}</strong><br/><span style={{fontSize:11,color:'var(--ink-soft)'}}>{b.userName}</span></td>
                         <td>{b.seats}</td>
                         <td><span className="mono" style={{color:'var(--coral)',fontWeight:700}}>€{b.total}</span></td>
                         <td>{fmtDate(b.createdAt)}</td>
