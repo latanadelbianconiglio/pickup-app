@@ -3779,10 +3779,10 @@ function DriverDashboard({ driver }) {
             <div className="page-title" style={{marginBottom:24}}>Prenotazioni <span className="accent">Ricevute</span></div>
             <div className="table-wrap">
               <table>
-                <thead><tr><th>ID</th><th>Viaggio</th><th>Posti</th><th>Importo</th><th>Data</th><th>Stato</th></tr></thead>
+                <thead><tr><th>ID</th><th>Viaggio</th><th>Posti</th><th>Importo</th><th>Data</th><th>Stato</th><th>Chat</th></tr></thead>
                 <tbody>
                   {myBookings.length===0 ? (
-                    <tr><td colSpan={6} style={{textAlign:'center',padding:40,color:'var(--ink-faint)'}}>Nessuna prenotazione ancora</td></tr>
+                    <tr><td colSpan={7} style={{textAlign:'center',padding:40,color:'var(--ink-faint)'}}>Nessuna prenotazione ancora</td></tr>
                   ) : myBookings.map(b=>{
                     const t=getTrip(b.tripId);
                     return (
@@ -4004,15 +4004,18 @@ function ChatModal({ booking, currentUser, currentUserType, otherName, onClose }
   const bottomRef = React.useRef(null);
 
   React.useEffect(() => {
+    if (!booking?.id) { setLoading(false); return; }
     dbGetMessages(booking.id).then(msgs => {
       setMessages(msgs);
       setLoading(false);
-    });
-    const channel = dbSubscribeMessages(booking.id, msg => {
-      setMessages(prev => [...prev, msg]);
-    });
-    return () => supabase.removeChannel(channel);
-  }, [booking.id]);
+    }).catch(() => setLoading(false));
+    try {
+      const channel = dbSubscribeMessages(booking.id, msg => {
+        setMessages(prev => [...prev, msg]);
+      });
+      return () => supabase.removeChannel(channel);
+    } catch(e) { console.error(e); }
+  }, [booking?.id]);
 
   React.useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
