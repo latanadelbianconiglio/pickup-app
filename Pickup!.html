@@ -6,7 +6,7 @@
 <title>Pick Up! — Sali a Bordo</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js?v=2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Righteous&family=Nunito:wght@400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -1161,7 +1161,6 @@ const { useState, useEffect, useRef } = React;
 // ─── SUPABASE CLIENT ─────────────────────────────────────────────────────────
 // ⚠️  SOSTITUISCI i due valori qui sotto con quelli del tuo progetto Supabase
 //    Li trovi su: supabase.com → tuo progetto → Settings → API
-// v2
 const SUPABASE_URL = 'https://zopxjzmjflikvecsquth.supabase.co';   // es. https://xyzxyz.supabase.co
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpvcHhqem1qZmxpa3ZlY3NxdXRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIyMDA2NzMsImV4cCI6MjA4Nzc3NjY3M30.61PfT0u6xiYyutLk18XJ_lY1C9xdXjZ6WvA0ii4e7Kw';       // chiave pubblica (anon/public)
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -2602,7 +2601,8 @@ function BookingModal({ trip, user, onClose, onBook }) {
                       <DriverPhoto driver={driver} size={64}/>
                       <div>
                         <div style={{fontWeight:800,fontSize:17,color:'var(--ink)',marginBottom:4}}>
-                          {driver.name} <span style={{background:'#2aad74',color:'white',fontSize:11,fontWeight:800,padding:'2px 8px',borderRadius:20,marginLeft:8}}>✓ Verificato</span>
+                          {driver.name}
+                          <span style={{background:'#2aad74',color:'white',fontSize:11,fontWeight:800,padding:'2px 8px',borderRadius:20,marginLeft:8}}>✓ Verificato</span>
                         </div>
                         <div style={{fontSize:12,color:'var(--ink-soft)',marginBottom:6}}>🚛 {driver.truck} · {driver.plate}</div>
                         <div className="company-badge">🏢 {company?.name}</div>
@@ -3018,9 +3018,12 @@ function TripDetailModal({ trip, user, onClose, onBookOpen }) {
               <div style={{fontSize:11,fontWeight:800,letterSpacing:1.2,textTransform:'uppercase',color:'var(--ink-soft)',marginBottom:10}}>Autista</div>
               <div style={{background:'linear-gradient(135deg,var(--sky),#d0eeff)',borderRadius:16,padding:18,border:'1.5px solid var(--border)',marginBottom:12}}>
                 <div style={{display:'flex',gap:12,marginBottom:12}}>
-                  <div className="avatar avatar-driver avatar-lg">{driver.avatar}</div>
+                  <DriverPhoto driver={driver} size={64}/>
                   <div>
-<div style={{fontWeight:800,fontSize:17,color:'var(--ink)',marginBottom:4}}>{driver.name} <span style={{background:'#2aad74',color:'white',fontSize:11,fontWeight:800,padding:'2px 8px',borderRadius:20,marginLeft:8}}>✓ Verificato</span></div>   
+                    <div style={{fontWeight:800,fontSize:17,color:'var(--ink)',marginBottom:4}}>
+                      {driver.name}
+                      {(driver.verified || driver.verification_status === 'verified') && <span style={{background:'#2aad74',color:'white',fontSize:11,fontWeight:800,padding:'2px 8px',borderRadius:20,marginLeft:8}}>✓ Verificato</span>}
+                    </div>
                     <div style={{fontSize:12,color:'var(--ink-soft)',marginBottom:6}}>🚛 {driver.truck} · {driver.plate}</div>
                     <div className="company-badge">🏢 {company?.name}</div>
                     <div style={{marginTop:6}}><span style={{fontSize:13,fontWeight:800,color:'#a07600'}}>★ {driver.rating}</span> <span style={{fontSize:12,color:'var(--ink-faint)',fontWeight:600}}>{driver.experience} anni</span></div>
@@ -3544,6 +3547,10 @@ function DriverDashboard({ driver }) {
   };
 
   const createTrip = async () => {
+    if (!driver.verified && driver.verification_status !== 'verified') {
+      setToast({msg:'⚠️ Devi verificare la tua identità prima di pubblicare viaggi. Vai su Verifica Identità.', type:'error'});
+      return;
+    }
     if (!nt.from||!nt.to||!nt.date) { setToast({msg:'Compila partenza, destinazione e data.',type:'error'}); return; }
     try {
       const newTrip = await dbCreateTrip(driver.id, nt);
