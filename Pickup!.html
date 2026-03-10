@@ -3430,8 +3430,7 @@ function UserDashboard({ user, onNavigate }) {
 
   return (
     <div className="dashboard-layout">
-      {reviewModal && <ReviewModal booking={reviewModal.booking} driver={reviewModal.driver} user={user} onClose={()=>setReviewModal(null)} onToast={setToast}/>}
-      {chatModal && <ChatModal booking={chatModal.booking} currentUser={user} currentUserType="user" otherName={chatModal.driverName} onClose={()=>setChatModal(null)}/>}
+      {chatModal && <ChatModal booking={chatModal.booking} currentUser={{id: driver.auth_id}} currentUserType="driver" otherName={chatModal.userName} onClose={()=>setChatModal(null)}/>}
       {toast && <Toast {...toast} onClose={()=>setToast(null)}/>}
       <div className="sidebar">
         <div style={{padding:'0 12px 20px'}}>
@@ -3656,8 +3655,7 @@ function DriverDashboard({ driver }) {
 
   return (
     <div className="dashboard-layout">
-      {reviewModal && <ReviewModal booking={reviewModal.booking} driver={reviewModal.driver} user={user} onClose={()=>setReviewModal(null)} onToast={setToast}/>}
-      {chatModal && <ChatModal booking={chatModal.booking} currentUser={user} currentUserType="user" otherName={chatModal.driverName} onClose={()=>setChatModal(null)}/>}
+      {chatModal && <ChatModal booking={chatModal.booking} currentUser={{id: driver.auth_id}} currentUserType="driver" otherName={chatModal.userName} onClose={()=>setChatModal(null)}/>}
       {toast && <Toast {...toast} onClose={()=>setToast(null)}/>}
       <div className="sidebar">
         <div style={{padding:'0 12px 20px',textAlign:'center'}}>
