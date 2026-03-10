@@ -1848,6 +1848,36 @@ const dbCancelBooking = async (bookingId, tripId, seats) => {
 };
 
 // Helper: restituisce profilo autista completo dal DB
+
+// ─── CHAT FUNCTIONS ───────────────────────────────────────────────────────────
+const dbGetMessages = async (bookingId) => {
+  const { data, error } = await supabase
+    .from('messages')
+    .select('*')
+    .eq('booking_id', bookingId)
+    .order('created_at', { ascending: true });
+  if (error) return [];
+  return data || [];
+};
+
+const dbSendMessage = async (bookingId, senderId, senderType, content) => {
+  const { data, error } = await supabase.from('messages').insert({
+    booking_id: bookingId, sender_id: senderId,
+    sender_type: senderType, content
+  }).select().single();
+  if (error) throw error;
+  return data;
+};
+
+const dbSubscribeMessages = (bookingId, onMessage) => {
+  return supabase.channel('messages:' + bookingId)
+    .on('postgres_changes', {
+      event: 'INSERT', schema: 'public', table: 'messages',
+      filter: 'booking_id=eq.' + bookingId
+    }, payload => onMessage(payload.new))
+    .subscribe();
+};
+
 // ─── REVIEW FUNCTIONS ─────────────────────────────────────────────────────────
 const dbCreateReview = async (bookingId, driverId, userId, rating, comment) => {
   const { data, error } = await supabase.from('reviews').insert({
@@ -3366,6 +3396,7 @@ function UserDashboard({ user, onNavigate }) {
   const [myBookings, setMyBookings] = useState([]);
   const [loadingB, setLoadingB] = useState(true);
   const [reviewModal, setReviewModal] = React.useState(null);
+  const [chatModal, setChatModal] = React.useState(null);
   const [cancellingId, setCancellingId] = useState(null);
   const [toast, setToast] = useState(null);
   const spent = myBookings.filter(b=>b.status==='confirmed').reduce((s,b)=>s+(Number(b.total)||0),0);
@@ -3400,6 +3431,7 @@ function UserDashboard({ user, onNavigate }) {
   return (
     <div className="dashboard-layout">
       {reviewModal && <ReviewModal booking={reviewModal.booking} driver={reviewModal.driver} user={user} onClose={()=>setReviewModal(null)} onToast={setToast}/>}
+      {chatModal && <ChatModal booking={chatModal.booking} currentUser={user} currentUserType="user" otherName={chatModal.driverName} onClose={()=>setChatModal(null)}/>}
       {toast && <Toast {...toast} onClose={()=>setToast(null)}/>}
       <div className="sidebar">
         <div style={{padding:'0 12px 20px'}}>
@@ -3520,12 +3552,20 @@ function UserDashboard({ user, onNavigate }) {
                           </div>
                         )}
                         {b.status === 'confirmed' && b.trip && (
-                          <button className="btn btn-ghost btn-sm"
-                            style={{color:'#a07600',borderColor:'#f6d860',marginTop:8}}
-                            onClick={()=>setReviewModal({booking:b, driver:b.trip.driver||{}})}
-                          >
-                            ⭐ Lascia Recensione
-                          </button>
+                          <div style={{display:'flex',gap:8,marginTop:8,flexWrap:'wrap'}}>
+                            <button className="btn btn-ghost btn-sm"
+                              style={{color:'var(--ocean)',borderColor:'var(--ocean)'}}
+                              onClick={()=>setChatModal({booking:b, driverName:b.trip.driver?.name||'Autista'})}
+                            >
+                              💬 Chatta
+                            </button>
+                            <button className="btn btn-ghost btn-sm"
+                              style={{color:'#a07600',borderColor:'#f6d860'}}
+                              onClick={()=>setReviewModal({booking:b, driver:b.trip.driver||{}})}
+                            >
+                              ⭐ Recensione
+                            </button>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -3563,6 +3603,7 @@ function DriverDashboard({ driver }) {
   const [showNew, setShowNew] = useState(false);
   const [showEditPrefs, setShowEditPrefs] = useState(false);
   const [toast, setToast] = useState(null);
+  const [chatModal, setChatModal] = React.useState(null);
   const company = driver.company || { name: driver.company_name || 'Azienda' };
   const [myTrips, setMyTrips] = useState([]);
   const [myBookings, setMyBookings] = useState([]);
@@ -3616,6 +3657,7 @@ function DriverDashboard({ driver }) {
   return (
     <div className="dashboard-layout">
       {reviewModal && <ReviewModal booking={reviewModal.booking} driver={reviewModal.driver} user={user} onClose={()=>setReviewModal(null)} onToast={setToast}/>}
+      {chatModal && <ChatModal booking={chatModal.booking} currentUser={user} currentUserType="user" otherName={chatModal.driverName} onClose={()=>setChatModal(null)}/>}
       {toast && <Toast {...toast} onClose={()=>setToast(null)}/>}
       <div className="sidebar">
         <div style={{padding:'0 12px 20px',textAlign:'center'}}>
@@ -3753,6 +3795,12 @@ function DriverDashboard({ driver }) {
                         <td><span className="mono" style={{color:'var(--coral)',fontWeight:700}}>€{b.total}</span></td>
                         <td>{fmtDate(b.createdAt)}</td>
                         <td><span className="badge badge-green">✓ confermata</span></td>
+                        <td>
+                          <button className="btn btn-ghost btn-sm" style={{color:'var(--ocean)',padding:'4px 10px'}}
+                            onClick={()=>setChatModal({booking:b, userName:b.userName||'Passeggero'})}>
+                            💬
+                          </button>
+                        </td>
                       </tr>
                     );
                   })}
@@ -3947,6 +3995,133 @@ function DriverDashboard({ driver }) {
 }
 
 
+
+
+// ─── CHAT MODAL ───────────────────────────────────────────────────────────────
+function ChatModal({ booking, currentUser, currentUserType, otherName, onClose }) {
+  const [messages, setMessages] = React.useState([]);
+  const [text, setText] = React.useState('');
+  const [loading, setLoading] = React.useState(true);
+  const [sending, setSending] = React.useState(false);
+  const bottomRef = React.useRef(null);
+
+  React.useEffect(() => {
+    dbGetMessages(booking.id).then(msgs => {
+      setMessages(msgs);
+      setLoading(false);
+    });
+    const channel = dbSubscribeMessages(booking.id, msg => {
+      setMessages(prev => [...prev, msg]);
+    });
+    return () => supabase.removeChannel(channel);
+  }, [booking.id]);
+
+  React.useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const sendMessage = async () => {
+    if (!text.trim()) return;
+    setSending(true);
+    try {
+      const msg = await dbSendMessage(booking.id, currentUser.id, currentUserType, text.trim());
+      setMessages(prev => [...prev, msg]);
+      setText('');
+    } catch(e) {
+      console.error(e);
+    } finally { setSending(false); }
+  };
+
+  const handleKey = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  };
+
+  const fmtTime = (ts) => new Date(ts).toLocaleTimeString('it-IT', {hour:'2-digit',minute:'2-digit'});
+  const fmtDay = (ts) => new Date(ts).toLocaleDateString('it-IT', {day:'numeric',month:'short'});
+
+  let lastDay = null;
+
+  return (
+    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal" style={{maxWidth:520, height:'80vh', display:'flex', flexDirection:'column'}}>
+        <div className="modal-header" style={{flexShrink:0}}>
+          <div style={{display:'flex',alignItems:'center',gap:10}}>
+            <div style={{width:36,height:36,borderRadius:'50%',background:'linear-gradient(135deg,var(--ocean),var(--sky))',
+              display:'flex',alignItems:'center',justifyContent:'center',fontSize:18}}>💬</div>
+            <div>
+              <div className="modal-title" style={{marginBottom:0}}>Chat con {otherName}</div>
+              <div style={{fontSize:11,color:'var(--ink-soft)'}}>Prenotazione #{booking.id?.slice(-6).toUpperCase()}</div>
+            </div>
+          </div>
+          <button className="modal-close" onClick={onClose}>×</button>
+        </div>
+
+        {/* Messages */}
+        <div style={{flex:1,overflowY:'auto',padding:'16px',display:'flex',flexDirection:'column',gap:8}}>
+          {loading ? (
+            <div style={{textAlign:'center',padding:40,color:'var(--ink-soft)'}}>⏳ Caricamento...</div>
+          ) : messages.length === 0 ? (
+            <div style={{textAlign:'center',padding:40}}>
+              <div style={{fontSize:40,marginBottom:8}}>💬</div>
+              <div style={{color:'var(--ink-soft)',fontSize:14}}>Nessun messaggio ancora.<br/>Inizia la conversazione!</div>
+            </div>
+          ) : (
+            messages.map((msg, i) => {
+              const isMine = msg.sender_id === currentUser.id;
+              const day = fmtDay(msg.created_at);
+              const showDay = day !== lastDay;
+              lastDay = day;
+              return (
+                <React.Fragment key={msg.id}>
+                  {showDay && (
+                    <div style={{textAlign:'center',fontSize:11,color:'var(--ink-faint)',margin:'8px 0'}}>
+                      {day}
+                    </div>
+                  )}
+                  <div style={{display:'flex',justifyContent:isMine?'flex-end':'flex-start'}}>
+                    <div style={{
+                      maxWidth:'75%',padding:'10px 14px',borderRadius:isMine?'18px 18px 4px 18px':'18px 18px 18px 4px',
+                      background:isMine?'linear-gradient(135deg,var(--ocean),#1a5fa8)':'white',
+                      color:isMine?'white':'var(--ink)',
+                      boxShadow:'0 1px 4px rgba(0,0,0,0.08)',
+                      fontSize:14,lineHeight:1.5
+                    }}>
+                      <div>{msg.content}</div>
+                      <div style={{fontSize:10,opacity:0.7,marginTop:4,textAlign:'right'}}>{fmtTime(msg.created_at)}</div>
+                    </div>
+                  </div>
+                </React.Fragment>
+              );
+            })
+          )}
+          <div ref={bottomRef}/>
+        </div>
+
+        {/* Input */}
+        <div style={{flexShrink:0,padding:'12px 16px',borderTop:'1px solid var(--border)',
+          display:'flex',gap:8,alignItems:'flex-end',background:'white'}}>
+          <textarea
+            value={text}
+            onChange={e=>setText(e.target.value)}
+            onKeyDown={handleKey}
+            placeholder="Scrivi un messaggio..."
+            rows={1}
+            style={{flex:1,padding:'10px 14px',borderRadius:20,border:'1.5px solid var(--border)',
+            fontSize:14,fontFamily:'inherit',resize:'none',outline:'none',
+            maxHeight:100,overflowY:'auto',lineHeight:1.5}}
+          />
+          <button onClick={sendMessage} disabled={sending || !text.trim()}
+            style={{width:40,height:40,borderRadius:'50%',border:'none',cursor:'pointer',flexShrink:0,
+            background:text.trim()?'linear-gradient(135deg,var(--ocean),#1a5fa8)':'var(--border)',
+            color:'white',fontSize:18,display:'flex',alignItems:'center',justifyContent:'center',
+            transition:'all 0.2s'}}>
+            {sending ? '...' : '➤'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ─── REVIEWS SECTION ──────────────────────────────────────────────────────────
 function ReviewsSection({ driverId }) {
