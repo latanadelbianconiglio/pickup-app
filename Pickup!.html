@@ -3020,7 +3020,7 @@ function TripDetailModal({ trip, user, onClose, onBookOpen }) {
                 <div style={{display:'flex',gap:12,marginBottom:12}}>
                   <div className="avatar avatar-driver avatar-lg">{driver.avatar}</div>
                   <div>
-                    <div style={{fontWeight:800,fontSize:15,marginBottom:3}}>{driver.name}</div>
+                    <div style={{fontWeight:800,fontWeight:800,fontSize:17,color:'var(--ink)',marginBottom:4}}>{driver.name} <span style={{background:'#2aad74',color:'white',fontSize:11,fontWeight:800,padding:'2px 8px',borderRadius:20,marginLeft:8}}>✓ Verificato</span></div>}}>{driver.name}</div>
                     <div style={{fontSize:12,color:'var(--ink-soft)',marginBottom:6}}>🚛 {driver.truck} · {driver.plate}</div>
                     <div className="company-badge">🏢 {company?.name}</div>
                     <div style={{marginTop:6}}><span style={{fontSize:13,fontWeight:800,color:'#a07600'}}>★ {driver.rating}</span> <span style={{fontSize:12,color:'var(--ink-faint)',fontWeight:600}}>{driver.experience} anni</span></div>
