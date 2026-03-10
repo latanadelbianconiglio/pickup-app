@@ -3366,7 +3366,6 @@ function UserDashboard({ user, onNavigate }) {
   const [myBookings, setMyBookings] = useState([]);
   const [loadingB, setLoadingB] = useState(true);
   const [reviewModal, setReviewModal] = React.useState(null);
-  const [toast, setToast] = React.useState(null);
   const [cancellingId, setCancellingId] = useState(null);
   const [toast, setToast] = useState(null);
   const spent = myBookings.filter(b=>b.status==='confirmed').reduce((s,b)=>s+(Number(b.total)||0),0);
