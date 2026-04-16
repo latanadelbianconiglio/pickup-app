@@ -1829,6 +1829,12 @@ const sendBookingEmail = async ({ passengerEmail, passengerName, driverName, dri
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_KEY}` },
       body: JSON.stringify({ passengerEmail, passengerName, driverName, driverPhone, fromCity, toCity, departure, meetingPoint, seats, total, bookingId }),
     });
+    // Notifica autista nuova prenotazione
+fetch(`${SUPABASE_URL}/functions/v1/notify-driver-booking`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_KEY}` },
+  body: JSON.stringify({ bookingId })
+});
   } catch(e) {
     console.warn('Email non inviata:', e); // non bloccare la prenotazione se email fallisce
   }
