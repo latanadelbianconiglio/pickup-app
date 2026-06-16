@@ -2150,7 +2150,7 @@ function AuthModal({ mode:initMode, onClose, onLogin }) {
     name:'', email:'', password:'', confirmPassword:'',
     // driver specific
     phone:'', licenseNum:'', experience:'', truck:'', plate:'',
-    companyChoice:'existing', companyId:'1',
+    companyChoice:'existing', companyId:'',
     newCompanyName:'', newCompanyCity:'',
     bio:'',
   });
@@ -2166,7 +2166,10 @@ function AuthModal({ mode:initMode, onClose, onLogin }) {
   const isDriverMode = mode === 'driver-login' || mode === 'driver-register';
   const [companies, setCompanies] = useState([]);
   useEffect(() => {
-    if (mode === 'driver-register') dbGetCompanies().then(setCompanies);
+    if (mode === 'driver-register') dbGetCompanies().then(list => {
+      setCompanies(list);
+      if (list.length > 0) setForm(f => ({ ...f, companyId: list[0].id }));
+    });
   }, [mode]);
 
   const submitLogin = async () => {
@@ -2233,13 +2236,14 @@ function AuthModal({ mode:initMode, onClose, onLogin }) {
       // 2. Crea o trova azienda
       let companyId;
       if (form.companyChoice === 'new') {
-        if (!form.newCompanyName||!form.newCompanyCity) { setErr('Inserisci nome e città della nuova azienda.'); return; }
+        if (!form.newCompanyName||!form.newCompanyCity) { setErr('Inserisci nome e città della nuova azienda.'); setLoading(false); return; }
         const { data: co, error: coErr } = await supabase.from('companies')
           .insert({ name: form.newCompanyName, city: form.newCompanyCity })
           .select().single();
         if (coErr) { setErr('Errore creazione azienda: ' + coErr.message); return; }
         companyId = co.id;
       } else {
+        if (!form.companyId) { setErr('Seleziona un\'azienda dalla lista.'); setLoading(false); return; }
         companyId = form.companyId;
       }
 
