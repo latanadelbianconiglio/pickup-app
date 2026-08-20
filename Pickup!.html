@@ -1273,6 +1273,72 @@ create policy "Autista gestisce profilo" on drivers
 create policy "Inserisci azienda" on companies
   for insert with check (true);
 
+-- 12. TABELLE AGGIUNTIVE (verifiche, messaggi, recensioni) — abilita RLS
+alter table verifications enable row level security;
+alter table messages      enable row level security;
+alter table reviews       enable row level security;
+
+-- 13. RECENSIONI: chiunque le legge, solo chi ha una prenotazione confermata può scriverle
+create policy "Recensioni pubbliche" on reviews for select using (true);
+create policy "Utente scrive recensione" on reviews
+  for insert with check (user_id = auth.uid());
+
+-- 14. MESSAGGI (chat): solo le due parti della prenotazione possono leggerli/scriverli
+create policy "Chat solo parti coinvolte" on messages
+  for select using (
+    booking_id in (
+      select b.id from bookings b
+      left join trips t on t.id = b.trip_id
+      left join drivers d on d.id = t.driver_id
+      where b.user_id = auth.uid() or d.auth_id = auth.uid()
+    )
+  );
+create policy "Chat invio messaggi" on messages
+  for insert with check (
+    (sender_type = 'user'   and sender_id = auth.uid())
+    or
+    (sender_type = 'driver' and sender_id in (select id from drivers where auth_id = auth.uid()))
+  );
+
+-- 15. VERIFICHE IDENTITÀ: l'autista crea la propria richiesta e vede solo la sua
+create policy "Autista crea verifica" on verifications
+  for insert with check (
+    driver_id in (select id from drivers where auth_id = auth.uid())
+  );
+create policy "Autista vede propria verifica" on verifications
+  for select using (
+    driver_id in (select id from drivers where auth_id = auth.uid())
+  );
+
+-- ⚠️⚠️⚠️  SICUREZZA ADMIN — LEGGERE ⚠️⚠️⚠️
+-- Nel codice HTML il pannello admin è mostrato solo se l'email dell'utente
+-- corrisponde a ADMIN_EMAIL. Questo controllo è SOLO ESTETICO (lato client):
+-- un utente malintenzionato può comunque chiamare le API con la chiave anon.
+-- La sicurezza VERA deve stare qui, nelle policy RLS lato Supabase.
+--
+-- Passi consigliati:
+-- 1) Crea una tabella di ruoli admin sicura:
+--      create table admins (auth_id uuid primary key references auth.users(id));
+--      alter table admins enable row level security;
+--      -- inserisci a mano il tuo auth_id come admin dalla dashboard Supabase.
+-- 2) Funzione helper:
+--      create or replace function is_admin() returns boolean
+--      language sql security definer stable as $BODY$
+--        select exists(select 1 from admins where auth_id = auth.uid());
+--      $BODY$;
+-- 3) Policy che consentono all'admin di gestire le verifiche:
+--      create policy "Admin legge verifiche" on verifications
+--        for select using (is_admin());
+--      create policy "Admin aggiorna verifiche" on verifications
+--        for update using (is_admin());
+--      create policy "Admin aggiorna stato autisti" on drivers
+--        for update using (is_admin());
+--
+-- ⚠️ Inoltre: la policy "Autista gestisce profilo" (punto 9) permette all'autista
+-- di modificare QUALSIASI proprio campo, incluso 'rating'. In produzione il rating
+-- dovrebbe essere calcolato dalle recensioni (trigger) e NON modificabile
+-- direttamente dall'autista. Valuta di restringere i campi aggiornabili.
+
 ════════════════════════════════════════════════════════════════
 */
 
@@ -2141,7 +2207,7 @@ function Nav({ user, driver, onLoginOpen, onLogout, onNavigate, currentPage }) {
   );
 }
 
-function AuthModal({ mode:initMode, onClose, onLogin }) {
+function AuthModal({ mode:initMode, onClose, onLogin, onNavigate }) {
   // modes: login | register | driver-login | driver-register
   const [mode, setMode] = useState(initMode);
   const [step, setStep] = useState(1); // for driver-register multi-step
@@ -2153,6 +2219,8 @@ function AuthModal({ mode:initMode, onClose, onLogin }) {
     companyChoice:'existing', companyId:'',
     newCompanyName:'', newCompanyCity:'',
     bio:'',
+    // consensi legali (GDPR)
+    acceptTerms:false, acceptAge:false,
   });
   const [driverPrefsReg, setDriverPrefsReg] = useState({
     music:true, talking:true, smoking:false, pets:false, food:true, stops:true, ac:true, quiet:false
@@ -2161,7 +2229,19 @@ function AuthModal({ mode:initMode, onClose, onLogin }) {
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
   const up = k => e => setForm(f=>({...f,[k]:e.target.value}));
+  const chk = k => e => setForm(f=>({...f,[k]:e.target.checked}));
   const togglePrefReg = k => setDriverPrefsReg(p=>({...p,[k]:!p[k]}));
+
+  // Validazione lato client (email valida, password robusta, consensi obbligatori)
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const validateRegistration = () => {
+    if (!EMAIL_RE.test((form.email||'').trim())) { setErr('Inserisci un indirizzo email valido.'); return false; }
+    if ((form.password||'').length < 8) { setErr('La password deve avere almeno 8 caratteri.'); return false; }
+    if (form.password !== form.confirmPassword) { setErr('Le password non coincidono.'); return false; }
+    if (!form.acceptTerms) { setErr('Devi accettare Termini di Servizio e Privacy Policy per registrarti.'); return false; }
+    if (!form.acceptAge) { setErr('Devi confermare di avere almeno 18 anni.'); return false; }
+    return true;
+  };
 
   const isDriverMode = mode === 'driver-login' || mode === 'driver-register';
   const [companies, setCompanies] = useState([]);
@@ -2195,13 +2275,13 @@ function AuthModal({ mode:initMode, onClose, onLogin }) {
       }
       if (mode==='register') {
         // Registrazione passeggero
-        if (!form.name||!form.email||!form.password) { setErr('Compila tutti i campi.'); return; }
-        if (form.password !== form.confirmPassword) { setErr('Le password non coincidono.'); return; }
-        const { data, error } = await supabase.auth.signUp({ email: form.email, password: form.password });
+        if (!form.name.trim()) { setErr('Inserisci il tuo nome completo.'); return; }
+        if (!validateRegistration()) return;
+        const { data, error } = await supabase.auth.signUp({ email: form.email.trim(), password: form.password });
         if (error) { setErr(error.message); return; }
         // Salva nome nella tabella users
-        await supabase.from('users').insert({ id: data.user.id, name: form.name, email: form.email });
-        const nu = { id: data.user.id, name: form.name, email: form.email, avatar: form.name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2) };
+        await supabase.from('users').insert({ id: data.user.id, name: form.name.trim(), email: form.email.trim() });
+        const nu = { id: data.user.id, name: form.name.trim(), email: form.email.trim(), avatar: form.name.trim().split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2) };
         onLogin(nu, null); onClose();
       }
     } catch(e) {
@@ -2214,8 +2294,8 @@ function AuthModal({ mode:initMode, onClose, onLogin }) {
 
   const submitDriverRegStep1 = () => {
     setErr('');
-    if (!form.name||!form.email||!form.password) { setErr('Compila nome, email e password.'); return; }
-    if (form.password !== form.confirmPassword) { setErr('Le password non coincidono.'); return; }
+    if (!form.name.trim()) { setErr('Inserisci il tuo nome completo.'); return; }
+    if (!validateRegistration()) return;
     setStep(2);
   };
 
@@ -2275,6 +2355,21 @@ function AuthModal({ mode:initMode, onClose, onLogin }) {
       setLoading(false);
     }
   };
+
+  // Link alle pagine legali: chiude il modale e naviga
+  const goLegal = p => { onClose(); onNavigate && onNavigate(p); };
+  const consentBlock = (
+    <div style={{marginTop:4,marginBottom:16,display:'flex',flexDirection:'column',gap:10}}>
+      <label style={{display:'flex',alignItems:'flex-start',gap:10,cursor:'pointer',fontSize:13,color:'var(--ink-soft)',fontWeight:600,lineHeight:1.5}}>
+        <input type="checkbox" checked={form.acceptTerms} onChange={chk('acceptTerms')} style={{marginTop:2,width:18,height:18,accentColor:'var(--ocean)',flexShrink:0}}/>
+        <span>Dichiaro di aver letto e di accettare i <a onClick={e=>{e.preventDefault();goLegal('terms');}} style={{color:'var(--ocean)',fontWeight:800,cursor:'pointer'}}>Termini di Servizio</a> e la <a onClick={e=>{e.preventDefault();goLegal('privacy');}} style={{color:'var(--ocean)',fontWeight:800,cursor:'pointer'}}>Privacy Policy</a>.</span>
+      </label>
+      <label style={{display:'flex',alignItems:'flex-start',gap:10,cursor:'pointer',fontSize:13,color:'var(--ink-soft)',fontWeight:600,lineHeight:1.5}}>
+        <input type="checkbox" checked={form.acceptAge} onChange={chk('acceptAge')} style={{marginTop:2,width:18,height:18,accentColor:'var(--ocean)',flexShrink:0}}/>
+        <span>Confermo di avere almeno 18 anni.</span>
+      </label>
+    </div>
+  );
 
   const modalTitle = () => {
     if (mode==='login') return '👋 Bentornato!';
@@ -2347,6 +2442,7 @@ function AuthModal({ mode:initMode, onClose, onLogin }) {
                 <div className="form-group"><label className="form-label">Password</label><input className="form-input" type="password" placeholder="••••••••" value={form.password} onChange={up('password')}/></div>
                 <div className="form-group"><label className="form-label">Conferma Password</label><input className="form-input" type="password" placeholder="••••••••" value={form.confirmPassword} onChange={up('confirmPassword')}/></div>
               </div>
+              {consentBlock}
               <button className="btn btn-primary btn-full btn-lg" onClick={submitLogin} disabled={loading}>
                 {loading?<><span className="spinner"></span> Caricamento...</>:'Crea Account 🚀'}
               </button>
@@ -2391,6 +2487,7 @@ function AuthModal({ mode:initMode, onClose, onLogin }) {
                 <div className="form-group"><label className="form-label">Password</label><input className="form-input" type="password" placeholder="••••••••" value={form.password} onChange={up('password')}/></div>
                 <div className="form-group"><label className="form-label">Conferma Password</label><input className="form-input" type="password" placeholder="••••••••" value={form.confirmPassword} onChange={up('confirmPassword')}/></div>
               </div>
+              {consentBlock}
               <div style={{display:'flex',justifyContent:'flex-end'}}>
                 <button className="btn btn-lg" style={{background:'linear-gradient(135deg,var(--coral),#ff8060)',color:'white'}} onClick={submitDriverRegStep1}>
                   Avanti: Il Tuo Camion →
@@ -3287,9 +3384,17 @@ function HomePage({ onNavigate, onLoginOpen }) {
         </div>
       </div>
 
-      <footer style={{background:'var(--ink)',color:'rgba(255,255,255,0.5)',padding:'32px 40px',textAlign:'center'}}>
-        <div style={{fontFamily:'Righteous',fontSize:32,color:'white',marginBottom:6}}>Pick Up<span style={{color:'var(--coral)'}}>!</span></div>
-        <div style={{fontSize:13}}>© 2025 Pick Up! — Tutti i diritti riservati · Made with 🧡 in Italia</div>
+      <footer style={{background:'var(--ink)',color:'rgba(255,255,255,0.5)',padding:'36px 40px',textAlign:'center'}}>
+        <div style={{fontFamily:'Righteous',fontSize:32,color:'white',marginBottom:8}}>Pick Up<span style={{color:'var(--coral)'}}>!</span></div>
+        <div style={{display:'flex',gap:20,justifyContent:'center',flexWrap:'wrap',marginBottom:14}}>
+          <span style={{color:'rgba(255,255,255,0.7)',cursor:'pointer',fontWeight:700,fontSize:13}} onClick={()=>onNavigate('privacy')}>Privacy Policy</span>
+          <span style={{color:'rgba(255,255,255,0.7)',cursor:'pointer',fontWeight:700,fontSize:13}} onClick={()=>onNavigate('terms')}>Termini di Servizio</span>
+          <span style={{color:'rgba(255,255,255,0.7)',cursor:'pointer',fontWeight:700,fontSize:13}} onClick={()=>onNavigate('cookie')}>Cookie Policy</span>
+        </div>
+        <div style={{fontSize:12.5,opacity:0.8,maxWidth:560,margin:'0 auto 8px',lineHeight:1.5}}>
+          Pick Up! è una piattaforma di intermediazione per la condivisione delle spese di viaggio. Non è un servizio di trasporto professionale.
+        </div>
+        <div style={{fontSize:13}}>© 2026 Pick Up! — Tutti i diritti riservati · Made with 🧡 in Italia</div>
       </footer>
     </div>
   );
@@ -4476,6 +4581,196 @@ function AdminPanel({ user }) {
   );
 }
 
+// ─── PAGINE LEGALI (Privacy, Termini, Cookie) ──────────────────────────────────
+// ⚠️  I dati tra parentesi quadre [ ] sono PLACEHOLDER da compilare con i tuoi dati reali.
+//     Questi testi sono un modello di partenza: falli rivedere a un legale prima di andare online.
+const LEGAL = {
+  titolare: 'Mario Rossi',
+  email: 'Mario.rossi@gmail.com',
+  citta: 'Roma',
+  aggiornato: '20 agosto 2026',
+};
+
+function LegalLayout({ title, subtitle, onNavigate, children }) {
+  React.useEffect(() => { window.scrollTo(0, 0); }, []);
+  return (
+    <div style={{maxWidth:820,margin:'110px auto 40px',padding:'0 24px'}}>
+      <button className="btn btn-ghost btn-sm" onClick={()=>onNavigate('home')} style={{marginBottom:20}}>← Torna alla home</button>
+      <div style={{background:'linear-gradient(135deg,#1a7fbf,#5bb8f5)',borderRadius:20,padding:'32px 28px',marginBottom:28,color:'white'}}>
+        <div style={{fontFamily:'Righteous',fontSize:34,marginBottom:6}}>{title}</div>
+        {subtitle && <div style={{opacity:0.9,fontSize:15}}>{subtitle}</div>}
+        <div style={{opacity:0.75,fontSize:13,marginTop:10}}>Ultimo aggiornamento: {LEGAL.aggiornato}</div>
+      </div>
+      <div style={{background:'white',borderRadius:20,padding:'28px 30px',boxShadow:'var(--shadow-sm)',lineHeight:1.7,color:'var(--ink-mid)',fontSize:15}}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+const LegalH = ({children}) => <h2 style={{fontFamily:'Nunito',fontWeight:900,fontSize:19,color:'var(--ink)',margin:'26px 0 10px'}}>{children}</h2>;
+const LegalP = ({children, style}) => <p style={{marginBottom:12,...(style||{})}}>{children}</p>;
+const LegalUL = ({children}) => <ul style={{margin:'0 0 12px 22px',display:'flex',flexDirection:'column',gap:6}}>{children}</ul>;
+
+function PrivacyPage({ onNavigate }) {
+  return (
+    <LegalLayout title="Privacy Policy" subtitle="Informativa sul trattamento dei dati personali ai sensi degli artt. 13-14 del Regolamento UE 2016/679 (GDPR)" onNavigate={onNavigate}>
+      <LegalH>1. Titolare del trattamento</LegalH>
+      <LegalP>Il titolare del trattamento dei dati è {LEGAL.titolare}, contattabile all'indirizzo email <strong>{LEGAL.email}</strong>. Per qualsiasi richiesta relativa ai tuoi dati personali puoi scrivere a questo indirizzo.</LegalP>
+
+      <LegalH>2. Quali dati raccogliamo</LegalH>
+      <LegalUL>
+        <li><strong>Dati di registrazione:</strong> nome, cognome, indirizzo email, password (memorizzata in forma cifrata), numero di telefono.</li>
+        <li><strong>Dati degli autisti:</strong> foto profilo, dati del veicolo (modello, targa), anni di esperienza, azienda di appartenenza, documento di identità caricato per la verifica.</li>
+        <li><strong>Dati di viaggio e prenotazione:</strong> tratte pubblicate, prenotazioni, messaggi in chat, recensioni.</li>
+        <li><strong>Dati tecnici:</strong> dati di sessione necessari a mantenerti autenticato.</li>
+      </LegalUL>
+
+      <LegalH>3. Finalità e base giuridica</LegalH>
+      <LegalUL>
+        <li>Erogazione del servizio di condivisione viaggi (esecuzione del contratto, art. 6.1.b GDPR).</li>
+        <li>Verifica dell'identità degli autisti per la sicurezza della community (legittimo interesse e obbligo di sicurezza, art. 6.1.f).</li>
+        <li>Invio di email di servizio (conferme prenotazione, notifiche) — esecuzione del contratto.</li>
+        <li>Adempimenti di legge (art. 6.1.c).</li>
+      </LegalUL>
+
+      <LegalH>4. Come e dove trattiamo i dati</LegalH>
+      <LegalP>I dati sono trattati tramite fornitori terzi che agiscono come responsabili del trattamento:</LegalP>
+      <LegalUL>
+        <li><strong>Supabase</strong> (database, autenticazione, storage) — i dati possono essere ospitati su server nell'Unione Europea o in altri Paesi con garanzie adeguate.</li>
+        <li><strong>Vercel</strong> (hosting del sito).</li>
+        <li><strong>Resend</strong> (invio delle email transazionali).</li>
+      </LegalUL>
+      <LegalP>Non vendiamo i tuoi dati a terzi. I dati di contatto (nome, telefono) vengono condivisi tra autista e passeggero solo dopo una prenotazione confermata, al fine di organizzare il viaggio.</LegalP>
+
+      <LegalH>5. Conservazione dei dati</LegalH>
+      <LegalP>Conserviamo i dati per il tempo necessario a fornire il servizio e finché mantieni un account attivo. I documenti di identità caricati per la verifica sono conservati solo per il tempo necessario alla verifica stessa e poi rimossi. Puoi richiedere la cancellazione del tuo account in qualsiasi momento.</LegalP>
+
+      <LegalH>6. I tuoi diritti</LegalH>
+      <LegalP>Ai sensi degli artt. 15-22 GDPR hai diritto di: accedere ai tuoi dati, rettificarli, cancellarli, limitarne il trattamento, opporti al trattamento e richiederne la portabilità. Per esercitare questi diritti scrivi a <strong>{LEGAL.email}</strong>. Hai inoltre il diritto di proporre reclamo al Garante per la protezione dei dati personali (www.garanteprivacy.it).</LegalP>
+
+      <LegalH>7. Minori</LegalH>
+      <LegalP>Il servizio è riservato a persone maggiorenni (18 anni). Non raccogliamo consapevolmente dati di minori.</LegalP>
+
+      <LegalP style={{marginTop:20,fontSize:13,color:'var(--ink-faint)'}}>Vedi anche la nostra <a onClick={e=>{e.preventDefault();onNavigate('cookie');}} style={{color:'var(--ocean)',fontWeight:700,cursor:'pointer'}}>Cookie Policy</a> e i <a onClick={e=>{e.preventDefault();onNavigate('terms');}} style={{color:'var(--ocean)',fontWeight:700,cursor:'pointer'}}>Termini di Servizio</a>.</LegalP>
+    </LegalLayout>
+  );
+}
+
+function TermsPage({ onNavigate }) {
+  return (
+    <LegalLayout title="Termini di Servizio" subtitle="Condizioni d'uso della piattaforma Pick Up!" onNavigate={onNavigate}>
+      <LegalH>1. Natura del servizio</LegalH>
+      <LegalP>Pick Up! è una <strong>piattaforma di intermediazione</strong> che mette in contatto autisti che effettuano spostamenti con passeggeri interessati a condividere il viaggio. Pick Up! <strong>non è un vettore di trasporto</strong>, non organizza i viaggi e non è parte dell'accordo tra autista e passeggero.</LegalP>
+
+      <LegalH>2. Condivisione delle spese (non a scopo di lucro)</LegalH>
+      <LegalP>I viaggi pubblicati su Pick Up! sono basati sul modello della <strong>condivisione delle spese</strong> (cost-sharing): l'importo richiesto ai passeggeri costituisce un contributo alle spese effettive del viaggio (carburante, pedaggi, usura del veicolo) e <strong>non può generare profitto</strong> per l'autista. Il servizio non costituisce attività di trasporto pubblico di persone né trasporto professionale, e non richiede quindi licenze di trasporto. Gli autisti si impegnano a non richiedere importi superiori alla quota di spese di viaggio.</LegalP>
+
+      <LegalH>3. Requisiti per l'uso</LegalH>
+      <LegalUL>
+        <li>Avere almeno 18 anni.</li>
+        <li>Fornire informazioni veritiere e aggiornate.</li>
+        <li>Per gli autisti: possedere patente valida, veicolo in regola e regolare copertura assicurativa RC Auto valida per il trasporto dei passeggeri trasportati.</li>
+      </LegalUL>
+
+      <LegalH>4. Obblighi degli autisti</LegalH>
+      <LegalUL>
+        <li>Guidare in modo sicuro e nel rispetto del Codice della Strada.</li>
+        <li>Assicurarsi che il veicolo sia in buono stato e assicurato.</li>
+        <li>Fornire informazioni accurate su tratta, orari e punto d'incontro.</li>
+      </LegalUL>
+
+      <LegalH>5. Obblighi dei passeggeri</LegalH>
+      <LegalUL>
+        <li>Presentarsi puntuali al punto d'incontro concordato.</li>
+        <li>Comportarsi in modo rispettoso verso l'autista e gli altri passeggeri.</li>
+        <li>Corrispondere la quota di spese concordata.</li>
+      </LegalUL>
+
+      <LegalH>6. Limitazione di responsabilità</LegalH>
+      <LegalP>Pick Up! si limita a fornire lo strumento tecnologico di incontro tra domanda e offerta. Pick Up! <strong>non risponde</strong> della condotta di autisti e passeggeri, dello svolgimento o della cancellazione dei viaggi, di eventuali danni, ritardi o incidenti. La verifica dei documenti degli autisti è uno strumento di supporto alla fiducia della community ma non costituisce garanzia assoluta. Ogni accordo di viaggio intercorre esclusivamente tra autista e passeggero, che se ne assumono la piena responsabilità.</LegalP>
+
+      <LegalH>7. Comportamenti vietati</LegalH>
+      <LegalUL>
+        <li>Utilizzare la piattaforma per attività di trasporto a scopo di lucro o commerciale.</li>
+        <li>Pubblicare contenuti falsi, offensivi o illegali.</li>
+        <li>Molestare o mettere in pericolo altri utenti.</li>
+      </LegalUL>
+      <LegalP>Ci riserviamo il diritto di sospendere o eliminare gli account che violano questi termini.</LegalP>
+
+      <LegalH>8. Modifiche ai termini</LegalH>
+      <LegalP>Possiamo aggiornare questi termini nel tempo. Le modifiche saranno pubblicate su questa pagina con la relativa data di aggiornamento.</LegalP>
+
+      <LegalH>9. Legge applicabile</LegalH>
+      <LegalP>I presenti termini sono regolati dalla legge italiana. Per qualsiasi controversia sarà competente il foro del luogo di residenza o domicilio del consumatore, se previsto dalla normativa applicabile.</LegalP>
+
+      <LegalP style={{marginTop:20,fontSize:13,color:'var(--ink-faint)'}}>Per domande scrivi a <strong>{LEGAL.email}</strong>. Consulta anche la <a onClick={e=>{e.preventDefault();onNavigate('privacy');}} style={{color:'var(--ocean)',fontWeight:700,cursor:'pointer'}}>Privacy Policy</a>.</LegalP>
+    </LegalLayout>
+  );
+}
+
+function CookiePage({ onNavigate }) {
+  return (
+    <LegalLayout title="Cookie Policy" subtitle="Informativa sull'uso di cookie e tecnologie simili" onNavigate={onNavigate}>
+      <LegalH>1. Cosa usiamo</LegalH>
+      <LegalP>Pick Up! utilizza esclusivamente <strong>cookie e tecnologie di archiviazione tecnici</strong>, necessari al funzionamento del sito. In particolare usiamo l'archiviazione locale del browser (localStorage) per mantenere attiva la tua sessione di accesso dopo il login.</LegalP>
+
+      <LegalH>2. Cookie tecnici (necessari)</LegalH>
+      <LegalP>Questi cookie/dati non richiedono il tuo consenso preventivo perché indispensabili a fornirti il servizio. Senza di essi non potresti restare autenticato. Sono gestiti dal nostro fornitore di autenticazione (Supabase).</LegalP>
+
+      <LegalH>3. Cookie di profilazione e marketing</LegalH>
+      <LegalP>Attualmente <strong>non</strong> utilizziamo cookie di profilazione, pubblicitari o di terze parti per finalità di marketing. Qualora in futuro dovessimo introdurli, aggiorneremo questa informativa e ti chiederemo il consenso.</LegalP>
+
+      <LegalH>4. Gestione</LegalH>
+      <LegalP>Puoi cancellare i dati memorizzati dal sito in qualsiasi momento dalle impostazioni del tuo browser (cancellazione di cookie e dati dei siti). Disabilitando l'archiviazione tecnica potresti però non riuscire a effettuare l'accesso.</LegalP>
+
+      <LegalP style={{marginTop:20,fontSize:13,color:'var(--ink-faint)'}}>Per approfondimenti sul trattamento dei dati vedi la <a onClick={e=>{e.preventDefault();onNavigate('privacy');}} style={{color:'var(--ocean)',fontWeight:700,cursor:'pointer'}}>Privacy Policy</a>.</LegalP>
+    </LegalLayout>
+  );
+}
+
+// ─── COOKIE BANNER ──────────────────────────────────────────────────────────────
+function CookieBanner({ onNavigate }) {
+  const [visible, setVisible] = React.useState(() => {
+    try { return localStorage.getItem('pickup_cookie_consent') !== '1'; } catch(e) { return true; }
+  });
+  if (!visible) return null;
+  const accept = () => {
+    try { localStorage.setItem('pickup_cookie_consent', '1'); } catch(e) {}
+    setVisible(false);
+  };
+  return (
+    <div style={{position:'fixed',bottom:16,left:16,right:16,zIndex:200,maxWidth:640,margin:'0 auto',
+      background:'white',border:'1.5px solid var(--border-mid)',borderRadius:16,boxShadow:'var(--shadow-lg)',
+      padding:'18px 20px',display:'flex',flexWrap:'wrap',alignItems:'center',gap:14,justifyContent:'space-between'}}>
+      <div style={{flex:'1 1 300px',fontSize:13.5,color:'var(--ink-mid)',lineHeight:1.55,fontWeight:600}}>
+        🍪 Usiamo solo cookie tecnici necessari al funzionamento del sito (per tenerti connesso). Nessuna profilazione.{' '}
+        <a onClick={e=>{e.preventDefault();onNavigate('cookie');}} style={{color:'var(--ocean)',fontWeight:800,cursor:'pointer'}}>Cookie Policy</a>
+      </div>
+      <button className="btn btn-ocean btn-sm" onClick={accept}>Ho capito</button>
+    </div>
+  );
+}
+
+// ─── FOOTER GLOBALE ─────────────────────────────────────────────────────────────
+function SiteFooter({ onNavigate }) {
+  const link = {color:'rgba(255,255,255,0.7)',cursor:'pointer',fontWeight:700,fontSize:13};
+  return (
+    <footer style={{background:'var(--ink)',color:'rgba(255,255,255,0.5)',padding:'36px 40px',textAlign:'center'}}>
+      <div style={{fontFamily:'Righteous',fontSize:30,color:'white',marginBottom:8}}>Pick Up<span style={{color:'var(--coral)'}}>!</span></div>
+      <div style={{display:'flex',gap:20,justifyContent:'center',flexWrap:'wrap',marginBottom:14}}>
+        <span style={link} onClick={()=>onNavigate('privacy')}>Privacy Policy</span>
+        <span style={link} onClick={()=>onNavigate('terms')}>Termini di Servizio</span>
+        <span style={link} onClick={()=>onNavigate('cookie')}>Cookie Policy</span>
+      </div>
+      <div style={{fontSize:12.5,opacity:0.8,maxWidth:560,margin:'0 auto 8px',lineHeight:1.5}}>
+        Pick Up! è una piattaforma di intermediazione per la condivisione delle spese di viaggio. Non è un servizio di trasporto professionale.
+      </div>
+      <div style={{fontSize:13}}>© 2026 Pick Up! — Tutti i diritti riservati · Made with 🧡 in Italia</div>
+    </footer>
+  );
+}
+
 // ─── APP ──────────────────────────────────────────────────────────────────────
 
 function App() {
@@ -4563,8 +4858,13 @@ function App() {
           <button className="btn btn-primary btn-lg" onClick={()=>setAuthModal('login')}>Accedi →</button>
         </div>
       )}
-      {authModal && <AuthModal mode={authModal} onClose={()=>setAuthModal(null)} onLogin={handleLogin}/>}
+      {page==='privacy' && <PrivacyPage onNavigate={setPage}/>}
+      {page==='terms' && <TermsPage onNavigate={setPage}/>}
+      {page==='cookie' && <CookiePage onNavigate={setPage}/>}
+      {authModal && <AuthModal mode={authModal} onClose={()=>setAuthModal(null)} onLogin={handleLogin} onNavigate={setPage}/>}
       {page==='admin' && user?.email===ADMIN_EMAIL && <AdminPanel user={user}/>}
+      {page!=='home' && <SiteFooter onNavigate={setPage}/>}
+      <CookieBanner onNavigate={setPage}/>
     </div>
   );
 }
