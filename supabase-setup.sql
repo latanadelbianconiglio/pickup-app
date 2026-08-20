@@ -27,7 +27,6 @@ create or replace function is_admin() returns boolean
     select exists(select 1 from admins where auth_id = auth.uid());
   $BODY$;
 
-insert into admins (auth_id) values ('6c38196d-1121-4204-a398-65514efc159b') on conflict do nothing;
 
 
 -- ─── 3. LETTURE PUBBLICHE (viaggi, aziende, autisti, recensioni) ─────────────
@@ -84,12 +83,10 @@ create policy "Chat solo parti coinvolte" on messages
       where b.user_id = auth.uid() or d.auth_id = auth.uid()
     )
   );
+-- NB: l'app salva sender_id = auth.uid() sia per il passeggero (users.id)
+-- sia per l'autista (drivers.auth_id). Quindi il check è unico e semplice.
 create policy "Chat invio messaggi" on messages
-  for insert with check (
-    (sender_type = 'user'   and sender_id = auth.uid())
-    or
-    (sender_type = 'driver' and sender_id in (select id from drivers where auth_id = auth.uid()))
-  );
+  for insert with check (sender_id = auth.uid());
 
 -- ─── 10. VERIFICHE IDENTITÀ ──────────────────────────────────────────────────
 -- L'autista crea/vede solo la propria; l'ADMIN legge e aggiorna tutto.
@@ -113,15 +110,17 @@ create policy "Admin aggiorna verifiche" on verifications
 create policy "Admin aggiorna stato autisti" on drivers
   for update using (is_admin());
 
--- ─── 11. (OPZIONALE ma consigliato) blocca la modifica del rating ───────────
--- Impedisce a un autista di auto-assegnarsi rating alti. Il rating viene
--- ricalcolato dalle recensioni (già fatto lato app in dbCreateReview).
--- Trigger che ignora ogni tentativo dell'autista di cambiare 'rating':
+-- ─── 11. Blocca l'auto-modifica di rating/verifica da parte dell'autista ────
+-- L'autista non può cambiarsi rating né auto-verificarsi. Il rating è scritto
+-- SOLO dal trigger di ricalcolo (punto 13), riconosciuto tramite un flag.
 create or replace function lock_driver_rating() returns trigger
   language plpgsql security definer as $BODY$
   begin
     if not is_admin() then
-      new.rating   := old.rating;    -- il rating lo calcolano le recensioni
+      -- il rating può cambiarlo solo il trigger di ricalcolo recensioni
+      if current_setting('pickup.rating_recalc', true) is distinct from '1' then
+        new.rating := old.rating;
+      end if;
       new.verified := old.verified;  -- non ci si auto-verifica
       -- l'autista può solo RICHIEDERE la verifica (impostare 'pending'),
       -- non può passare a 'verified'/'rejected' da solo.
@@ -137,6 +136,44 @@ drop trigger if exists trg_lock_driver_rating on drivers;
 create trigger trg_lock_driver_rating
   before update on drivers
   for each row execute function lock_driver_rating();
+
+-- ─── 12. DATI DI CONTATTO DEL PASSEGGERO sulla prenotazione ─────────────────
+-- Telefono, nota per l'autista e nomi degli altri passeggeri (prassi ridesharing).
+alter table bookings
+  add column if not exists passenger_phone text,
+  add column if not exists passenger_note  text,
+  add column if not exists passenger_names jsonb default '[]'::jsonb;
+
+-- ─── 13. RICALCOLO AUTOMATICO DEL RATING AUTISTA dalle recensioni ───────────
+-- Gira lato server (security definer): funziona anche con RLS attivo, senza
+-- che il passeggero abbia il permesso di scrivere sulla tabella drivers.
+create or replace function recalc_driver_rating() returns trigger
+  language plpgsql security definer as $BODY$
+  declare v_driver uuid; v_avg numeric;
+  begin
+    v_driver := coalesce(new.driver_id, old.driver_id);
+    select round(avg(rating)::numeric, 1) into v_avg from reviews where driver_id = v_driver;
+    perform set_config('pickup.rating_recalc', '1', true);  -- sblocca il lock del punto 11
+    update drivers set rating = coalesce(v_avg, 5.0) where id = v_driver;
+    return null;
+  end;
+  $BODY$;
+drop trigger if exists trg_recalc_rating on reviews;
+create trigger trg_recalc_rating
+  after insert or update or delete on reviews
+  for each row execute function recalc_driver_rating();
+
+-- ─── 14. CHAT IN TEMPO REALE: abilita il Realtime sulla tabella messages ────
+-- Senza questo la chat si aggiorna solo ricaricando la pagina.
+do $BODY$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname='supabase_realtime' and schemaname='public' and tablename='messages'
+  ) then
+    alter publication supabase_realtime add table messages;
+  end if;
+end $BODY$;
 
 -- ════════════════════════════════════════════════════════════════════════════
 --  FATTO. Ricorda di aver inserito il tuo auth_id nella tabella admins (punto 2).

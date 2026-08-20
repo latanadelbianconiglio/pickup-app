@@ -1294,11 +1294,7 @@ create policy "Chat solo parti coinvolte" on messages
     )
   );
 create policy "Chat invio messaggi" on messages
-  for insert with check (
-    (sender_type = 'user'   and sender_id = auth.uid())
-    or
-    (sender_type = 'driver' and sender_id in (select id from drivers where auth_id = auth.uid()))
-  );
+  for insert with check (sender_id = auth.uid());
 
 -- 15. VERIFICHE IDENTITÀ: l'autista crea la propria richiesta e vede solo la sua
 create policy "Autista crea verifica" on verifications
@@ -1824,8 +1820,8 @@ const dbCreateTrip = async (driverId, nt) => {
   return data;
 };
 
-// Prenota un viaggio
-const dbBookTrip = async (userId, tripId, seats, total) => {
+// Prenota un viaggio (contact = { phone, note, names[] } dati del passeggero)
+const dbBookTrip = async (userId, tripId, seats, total, contact = {}) => {
   // Usa una transazione: decrementa seats_left e crea booking
   const { data: trip } = await supabase.from('trips').select('seats_left').eq('id', tripId).single();
   if (!trip || trip.seats_left < seats) throw new Error('Posti non disponibili');
@@ -1833,6 +1829,9 @@ const dbBookTrip = async (userId, tripId, seats, total) => {
   if (e1) throw e1;
   const { data, error: e2 } = await supabase.from('bookings').insert({
     user_id: userId, trip_id: tripId, seats, total, status: 'confirmed',
+    passenger_phone: contact.phone || null,
+    passenger_note:  contact.note  || null,
+    passenger_names: contact.names || [],
   }).select().single();
   if (e2) throw e2;
   return data;
@@ -2905,23 +2904,35 @@ function BookingModal({ trip, user, onClose, onBook }) {
 // Rewrite step handling correctly
 function BookingModalFixed({ trip, user, onClose, onBook }) {
   const [seats, setSeats] = useState(1);
-  const [phase, setPhase] = useState('info'); // info | prefs | pay | done
+  const [phase, setPhase] = useState('info'); // info | prefs | contact | pay | done
   const [loading, setLoading] = useState(false);
   const [prefAck, setPrefAck] = useState(false);
+  // Dati di contatto del passeggero (prassi ridesharing)
+  const [phone, setPhone] = useState(user?.phone || '');
+  const [note, setNote] = useState('');
+  const [names, setNames] = useState([]); // nomi degli ALTRI passeggeri (seats-1)
+  const setName = (i, v) => setNames(ns => { const c = [...ns]; c[i] = v; return c; });
+  const extraCount = Math.max(0, seats - 1);
+  const contactValid = phone.trim().length >= 6
+    && Array.from({length:extraCount}).every((_,i)=>(names[i]||'').trim().length > 0);
   const driver = trip.driver || trip._driver || { name:'Autista', rating:5.0, experience:1, truck:'Camion', plate:'', avatar:'A', prefs:{}, id: trip.driverId };
   const company = driver ? getCompany(driver.companyId) : null;
   const total = seats * trip.price;
   const code = '#PU-' + Math.random().toString(36).substr(2,8).toUpperCase();
   const duration = calcDuration(trip.departure, trip.arrival) || calcDurationFromKm(trip.distance);
 
-  const phases = ['info','prefs','pay','done'];
+  const phases = ['info','prefs','contact','pay','done'];
   const phaseIdx = phases.indexOf(phase);
 
   const handleFinalBook = async () => {
     setLoading(true);
     await new Promise(r=>setTimeout(r,1200));
     setLoading(false);
-    onBook(trip,seats);
+    onBook(trip, seats, {
+      phone: phone.trim(),
+      note: note.trim(),
+      names: names.slice(0, extraCount).map(n=>(n||'').trim()).filter(Boolean),
+    });
     setPhase('done');
   };
 
@@ -2936,7 +2947,7 @@ function BookingModalFixed({ trip, user, onClose, onBook }) {
 
           {phase !== 'done' && (
             <div className="steps">
-              {[{id:'info',label:'Dettagli'},{id:'prefs',label:'Autista'},{id:'pay',label:'Pagamento'}].map((s,i,arr)=>(
+              {[{id:'info',label:'Dettagli'},{id:'prefs',label:'Autista'},{id:'contact',label:'Contatti'},{id:'pay',label:'Pagamento'}].map((s,i,arr)=>(
                 <React.Fragment key={s.id}>
                   <div className={`step ${phaseIdx>i?'done':phaseIdx===i?'active':''}`}>
                     <div className="step-circle">{phaseIdx>i?'✓':i+1}</div>
@@ -3106,7 +3117,61 @@ function BookingModalFixed({ trip, user, onClose, onBook }) {
                 <button
                   className={`btn btn-lg ${prefAck?'btn-primary':'btn-outline'}`}
                   style={{opacity:prefAck?1:0.55, cursor:prefAck?'pointer':'not-allowed'}}
-                  onClick={()=>{if(prefAck)setPhase('pay');}}
+                  onClick={()=>{if(prefAck)setPhase('contact');}}
+                >
+                  Avanti: I Tuoi Dati →
+                </button>
+              </div>
+            </div>
+          )}
+
+          {phase==='contact' && (
+            <div>
+              <div style={{fontSize:11,fontWeight:800,letterSpacing:1.2,textTransform:'uppercase',color:'var(--ink-soft)',marginBottom:6}}>I Tuoi Dati di Contatto</div>
+              <div style={{fontSize:13,color:'var(--ink-soft)',marginBottom:18,lineHeight:1.5}}>
+                L'autista li userà solo per organizzare il viaggio. Verranno condivisi con lui dopo la conferma.
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Nome passeggero principale</label>
+                <input className="form-input" value={user?.name || ''} disabled
+                  style={{background:'var(--sky)',color:'var(--ink-soft)'}}/>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">📞 Numero di telefono *</label>
+                <input className="form-input" type="tel" placeholder="+39 333 123 4567"
+                  value={phone} onChange={e=>setPhone(e.target.value)}/>
+                {phone.trim().length>0 && phone.trim().length<6 &&
+                  <div style={{fontSize:12,color:'var(--coral)',marginTop:4,fontWeight:700}}>Inserisci un numero valido.</div>}
+              </div>
+
+              {extraCount>0 && (
+                <div className="form-group">
+                  <label className="form-label">Nomi degli altri passeggeri ({extraCount}) *</label>
+                  <div style={{display:'flex',flexDirection:'column',gap:8}}>
+                    {Array.from({length:extraCount}).map((_,i)=>(
+                      <input key={i} className="form-input" placeholder={`Passeggero ${i+2} — Nome e cognome`}
+                        value={names[i]||''} onChange={e=>setName(i, e.target.value)}/>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="form-group">
+                <label className="form-label">Nota per l'autista (opzionale)</label>
+                <textarea value={note} onChange={e=>setNote(e.target.value)}
+                  placeholder="Es. bagagli ingombranti, punto d'incontro preferito, ritardo previsto..."
+                  style={{width:'100%',minHeight:80,padding:12,borderRadius:12,border:'1.5px solid var(--border)',
+                  fontSize:14,fontFamily:'inherit',resize:'vertical',boxSizing:'border-box'}}/>
+              </div>
+
+              <div style={{display:'flex',justifyContent:'space-between',marginTop:8}}>
+                <button className="btn btn-ghost" onClick={()=>setPhase('prefs')}>← Indietro</button>
+                <button
+                  className={`btn btn-lg ${contactValid?'btn-primary':'btn-outline'}`}
+                  style={{opacity:contactValid?1:0.55, cursor:contactValid?'pointer':'not-allowed'}}
+                  onClick={()=>{if(contactValid)setPhase('pay');}}
                 >
                   Vai al Pagamento →
                 </button>
@@ -3142,7 +3207,7 @@ function BookingModalFixed({ trip, user, onClose, onBook }) {
                 </div>
               </div>
               <div style={{display:'flex',justifyContent:'space-between'}}>
-                <button className="btn btn-ghost" onClick={()=>setPhase('prefs')}>← Indietro</button>
+                <button className="btn btn-ghost" onClick={()=>setPhase('contact')}>← Indietro</button>
                 <button className="btn btn-primary btn-lg" onClick={handleFinalBook} disabled={loading}>
                   {loading ? <><span className="spinner"></span> Elaborazione...</> : `💳 Paga €${total}`}
                 </button>
@@ -3423,10 +3488,10 @@ function TripsPage({ user, onLoginOpen }) {
 
   const filtered = trips; // il filtro è già fatto lato DB
 
-  const handleBook = async (trip, seats) => {
+  const handleBook = async (trip, seats, contact = {}) => {
     if (!user) { onLoginOpen('login'); return; }
     try {
-      const booking = await dbBookTrip(user.id, trip.id, seats, seats * trip.price);
+      const booking = await dbBookTrip(user.id, trip.id, seats, seats * trip.price, contact);
       // Aggiorna seats_left localmente
       setTrips(ts => ts.map(t => t.id === trip.id ? { ...t, seatsLeft: t.seatsLeft - seats } : t));
       setBookTrip(null); setSelTrip(null);
@@ -3569,6 +3634,7 @@ function UserDashboard({ user, onNavigate }) {
   return (
     <div className="dashboard-layout">
       {chatModal && <ChatModal booking={chatModal.booking} currentUser={user} currentUserType="user" otherName={chatModal.driverName} onClose={()=>setChatModal(null)}/>}
+      {reviewModal && <ReviewModal booking={reviewModal.booking} driver={reviewModal.driver} user={user} onClose={()=>setReviewModal(null)} onToast={setToast}/>}
       {toast && <Toast {...toast} onClose={()=>setToast(null)}/>}
       <div className="sidebar">
         <div style={{padding:'0 12px 20px'}}>
@@ -3918,16 +3984,24 @@ function DriverDashboard({ driver }) {
             <div className="page-title" style={{marginBottom:24}}>Prenotazioni <span className="accent">Ricevute</span></div>
             <div className="table-wrap">
               <table>
-                <thead><tr><th>ID</th><th>Viaggio</th><th>Posti</th><th>Importo</th><th>Data</th><th>Stato</th><th>Chat</th></tr></thead>
+                <thead><tr><th>ID</th><th>Viaggio</th><th>Posti</th><th>Contatti</th><th>Importo</th><th>Data</th><th>Stato</th><th>Chat</th></tr></thead>
                 <tbody>
                   {myBookings.length===0 ? (
-                    <tr><td colSpan={7} style={{textAlign:'center',padding:40,color:'var(--ink-faint)'}}>Nessuna prenotazione ancora</td></tr>
+                    <tr><td colSpan={8} style={{textAlign:'center',padding:40,color:'var(--ink-faint)'}}>Nessuna prenotazione ancora</td></tr>
                   ) : myBookings.map(b=>{
+                    const extraNames = Array.isArray(b.passenger_names) ? b.passenger_names : [];
                     return (
                       <tr key={b.id}>
                         <td className="mono" style={{color:'var(--ink-faint)'}}>#{b.id?.slice(-6).toUpperCase()}</td>
                         <td><strong style={{color:'var(--ink)'}}>{b.trip?.from_city} → {b.trip?.to_city}</strong><br/><span style={{fontSize:11,color:'var(--ink-soft)'}}>{b.userName}</span></td>
                         <td>{b.seats}</td>
+                        <td style={{fontSize:12,lineHeight:1.5,maxWidth:200}}>
+                          {b.passenger_phone
+                            ? <a href={`tel:${b.passenger_phone}`} style={{color:'var(--ocean)',fontWeight:700,textDecoration:'none'}}>📞 {b.passenger_phone}</a>
+                            : <span style={{color:'var(--ink-faint)'}}>—</span>}
+                          {extraNames.length>0 && <div style={{color:'var(--ink-soft)',marginTop:2}}>👥 {extraNames.join(', ')}</div>}
+                          {b.passenger_note && <div style={{color:'var(--ink-soft)',fontStyle:'italic',marginTop:2}}>💬 {b.passenger_note}</div>}
+                        </td>
                         <td><span className="mono" style={{color:'var(--coral)',fontWeight:700}}>€{b.total}</span></td>
                         <td>{fmtDate(b.createdAt)}</td>
                         <td><span className="badge badge-green">✓ confermata</span></td>
