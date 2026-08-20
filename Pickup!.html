@@ -4223,7 +4223,8 @@ function ChatModal({ booking, currentUser, currentUserType, otherName, onClose }
     }).catch(() => setLoading(false));
     try {
       const channel = dbSubscribeMessages(booking.id, msg => {
-        setMessages(prev => [...prev, msg]);
+        // evita duplicati: chi invia ha già aggiunto il messaggio localmente
+        setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg]);
       });
       return () => supabase.removeChannel(channel);
     } catch(e) { console.error(e); }
@@ -4238,7 +4239,7 @@ function ChatModal({ booking, currentUser, currentUserType, otherName, onClose }
     setSending(true);
     try {
       const msg = await dbSendMessage(booking.id, currentUser.id, currentUserType, text.trim());
-      setMessages(prev => [...prev, msg]);
+      setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg]);
       setText('');
     } catch(e) {
       console.error(e);
