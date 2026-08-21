@@ -1192,6 +1192,76 @@
       scroll-behavior: auto !important;
     }
   }
+
+  /* ── MICRO-INTERAZIONI ── */
+  .btn:active { transform: translateY(1px) scale(0.98); }
+  .card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); }
+  .nav-link, .city-dropdown-item { transition: background 0.15s, color 0.15s, transform 0.15s; }
+
+  /* ── SKELETON LOADER ── */
+  .skeleton {
+    background: linear-gradient(100deg, #e9f1f7 30%, #f5fafd 50%, #e9f1f7 70%);
+    background-size: 200% 100%;
+    animation: shimmer 1.3s ease-in-out infinite;
+    border-radius: 8px;
+  }
+  @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+  .skeleton-card {
+    background: var(--card-bg);
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    padding: 22px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* ── MENU MOBILE (hamburger) ── */
+  .nav-burger { display: none; background: var(--sky); border: none; border-radius: 12px; width: 42px; height: 42px; cursor: pointer; align-items: center; justify-content: center; }
+  .nav-burger span { display: block; width: 20px; height: 2.5px; background: var(--ocean); border-radius: 2px; position: relative; transition: all 0.25s; }
+  .nav-burger span::before, .nav-burger span::after { content: ''; position: absolute; left: 0; width: 20px; height: 2.5px; background: var(--ocean); border-radius: 2px; transition: all 0.25s; }
+  .nav-burger span::before { top: -6px; }
+  .nav-burger span::after { top: 6px; }
+  .nav-burger.open span { background: transparent; }
+  .nav-burger.open span::before { top: 0; transform: rotate(45deg); }
+  .nav-burger.open span::after { top: 0; transform: rotate(-45deg); }
+
+  .mobile-menu {
+    position: fixed; top: 68px; left: 0; right: 0; bottom: 0;
+    background: rgba(255,255,255,0.98);
+    backdrop-filter: blur(20px);
+    z-index: 99;
+    padding: 24px;
+    display: flex; flex-direction: column; gap: 8px;
+    animation: fadeIn 0.2s ease;
+    overflow-y: auto;
+  }
+  .mobile-menu .m-link {
+    padding: 16px 18px; border-radius: 14px; font-size: 17px; font-weight: 800;
+    color: var(--ink); cursor: pointer; background: var(--sky); display: flex; align-items: center; gap: 10px;
+  }
+  .mobile-menu .m-link.active { background: var(--ocean); color: white; }
+
+  @media (max-width:768px) {
+    .nav-burger { display: flex; }
+    .nav-actions { display: none; }
+  }
+  /* ── RICERCA NELL'HERO ── */
+  .hero-search {
+    background: rgba(255,255,255,0.96);
+    border-radius: 20px;
+    padding: 16px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.18);
+    display: grid;
+    grid-template-columns: 1fr 1fr auto auto;
+    gap: 12px;
+    align-items: end;
+    max-width: 780px;
+    margin: 0 auto 40px;
+    text-align: left;
+  }
+  .hero-search .hs-field label { display:block; font-size:12px; font-weight:800; color: var(--ink-soft); margin-bottom:5px; letter-spacing:0.3px; }
+  @media (max-width:768px) {
+    .hero-search { grid-template-columns: 1fr; }
+  }
 </style>
 </head>
 <body>
@@ -2261,7 +2331,11 @@ function Nav({ user, driver, onLoginOpen, onLogout, onNavigate, currentPage }) {
   const driverPhoto = driver ? getDriverPhoto(driver) : null;
   // Attiva un elemento cliccabile anche da tastiera (Invio / Spazio)
   const keyActivate = fn => e => { if (e.key==='Enter' || e.key===' ') { e.preventDefault(); fn(); } };
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const go = (p) => { onNavigate(p); setMobileOpen(false); };
+  const openAuth = (m) => { onLoginOpen(m); setMobileOpen(false); };
   return (
+    <>
     <nav aria-label="Navigazione principale">
       <div className="nav-logo" onClick={()=>onNavigate('home')} onKeyDown={keyActivate(()=>onNavigate('home'))} role="button" tabIndex={0} aria-label="Pick Up! — vai alla home">
         <span>Pick Up</span><span className="excl">!</span>
@@ -2296,7 +2370,39 @@ function Nav({ user, driver, onLoginOpen, onLogout, onNavigate, currentPage }) {
           </>
         )}
       </div>
+      <button className={`nav-burger ${mobileOpen?'open':''}`} onClick={()=>setMobileOpen(o=>!o)} aria-label="Apri menu" aria-expanded={mobileOpen}>
+        <span></span>
+      </button>
     </nav>
+
+    {mobileOpen && (
+      <div className="mobile-menu">
+        {isIn && (
+          <div style={{display:'flex',alignItems:'center',gap:12,padding:'6px 4px 14px'}}>
+            {driver && driverPhoto ? <img src={driverPhoto} alt={driver.name} className="nav-driver-photo"/> : <div className={`avatar ${driver?'avatar-driver':''}`}>{initials}</div>}
+            <div>
+              <div style={{fontWeight:800,color:'var(--ink)'}}>{name?.split(' ')[0]}</div>
+              {driver && <span className="badge badge-coral" style={{fontSize:10}}>🚛 Autista</span>}
+            </div>
+          </div>
+        )}
+        <div className={`m-link ${currentPage==='trips'?'active':''}`} onClick={()=>go('trips')}>🗺️ Viaggi</div>
+        <div className={`m-link ${currentPage==='home'?'active':''}`} onClick={()=>go('home')}>✨ Come Funziona</div>
+        {driver && <div className={`m-link ${currentPage==='driver-dash'?'active':''}`} onClick={()=>go('driver-dash')}>🚛 Dashboard</div>}
+        {user && !driver && <div className={`m-link ${currentPage==='user-dash'?'active':''}`} onClick={()=>go('user-dash')}>🎫 Le Mie Prenotazioni</div>}
+        {user?.email===ADMIN_EMAIL && <div className="m-link" onClick={()=>go('admin')}>⚙️ Admin</div>}
+        <div style={{height:1,background:'var(--border)',margin:'10px 0'}}></div>
+        {!isIn ? (
+          <>
+            <button className="btn btn-ghost btn-lg btn-full" onClick={()=>openAuth('login')}>Accedi</button>
+            <button className="btn btn-primary btn-lg btn-full" onClick={()=>openAuth('register')}>Registrati 🎉</button>
+          </>
+        ) : (
+          <button className="btn btn-ghost btn-lg btn-full" onClick={()=>{ onLogout(); setMobileOpen(false); }}>Esci</button>
+        )}
+      </div>
+    )}
+    </>
   );
 }
 
@@ -3405,11 +3511,13 @@ function TripDetailModal({ trip, user, onClose, onBookOpen }) {
 
 // ─── HOME ─────────────────────────────────────────────────────────────────────
 
-function HomePage({ onNavigate, onLoginOpen }) {
+function HomePage({ onNavigate, onLoginOpen, onSearch }) {
   const [homeTrips, setHomeTrips] = useState([]);
+  const [hs, setHs] = useState({ from:'', to:'', date:'' });
   useEffect(() => {
     dbGetTrips().then(data => setHomeTrips(data.slice(0,4)));
   }, []);
+  const runSearch = () => onSearch({ from: hs.from, to: hs.to, date: hs.date });
   return (
     <div>
       <div className="hero">
@@ -3427,21 +3535,40 @@ function HomePage({ onNavigate, onLoginOpen }) {
             Prenota un posto su un camion in viaggio verso la tua destinazione.
             Economico, sostenibile, e un'avventura unica ogni volta.
           </p>
+          {/* Ricerca diretta */}
+          <div className="hero-search">
+            <div className="hs-field">
+              <label>🏙️ Da</label>
+              <CityAutocomplete id="hero-from" value={hs.from} onChange={v=>setHs(h=>({...h,from:v}))} placeholder="Partenza..."/>
+            </div>
+            <div className="hs-field">
+              <label>📍 A</label>
+              <CityAutocomplete id="hero-to" value={hs.to} onChange={v=>setHs(h=>({...h,to:v}))} placeholder="Destinazione..."/>
+            </div>
+            <div className="hs-field">
+              <label>📅 Data</label>
+              <input className="form-input" type="date" value={hs.date} onChange={e=>setHs(h=>({...h,date:e.target.value}))} min={new Date().toISOString().split('T')[0]}/>
+            </div>
+            <button className="btn btn-primary btn-lg" onClick={runSearch} style={{height:48}}>🔍 Cerca</button>
+          </div>
+
           <div className="hero-ctas">
             <button className="btn btn-white btn-lg" onClick={()=>onLoginOpen('register')} aria-label="Registrati gratis come passeggero">
               🎉 Registrati Gratis
-            </button>
-            <button className="btn btn-lg" style={{background:'rgba(255,255,255,0.2)',color:'white',border:'2px solid rgba(255,255,255,0.4)', backdropFilter:'blur(10px)'}} onClick={()=>onNavigate('trips')} aria-label="Cerca i viaggi disponibili">
-              🔍 Cerca Viaggi
             </button>
             <button className="btn btn-lg" style={{background:'rgba(255,255,255,0.2)',color:'white',border:'2px solid rgba(255,255,255,0.4)', backdropFilter:'blur(10px)'}} onClick={()=>onLoginOpen('driver-register')} aria-label="Registrati come autista">
               🚛 Sei un Autista?
             </button>
           </div>
           <div className="hero-stats">
-            {[{n:'2.4K',l:'Viaggi'},{ n:'180+',l:'Autisti'},{ n:'85',l:'Città'},{ n:'4.8★',l:'Rating'}].map((s,i)=>(
+            {[
+              {icon:'🔒', l:'Autisti verificati'},
+              {icon:'💶', l:'Solo rimborso spese'},
+              {icon:'🌍', l:'In tutta Europa'},
+              {icon:'⭐', l:'Recensioni reali'},
+            ].map((s,i)=>(
               <div key={i} className="hero-stat">
-                <div className="hero-stat-num">{s.n}</div>
+                <div className="hero-stat-num" style={{fontSize:30}}>{s.icon}</div>
                 <div className="hero-stat-label">{s.l}</div>
               </div>
             ))}
@@ -3562,15 +3689,36 @@ function HomePage({ onNavigate, onLoginOpen }) {
   );
 }
 
+// ─── SKELETON LOADER ──────────────────────────────────────────────────────────
+function SkeletonCard() {
+  return (
+    <div className="skeleton-card">
+      <div className="skeleton" style={{height:18,width:'35%',marginBottom:14}}></div>
+      <div className="skeleton" style={{height:30,width:'75%',marginBottom:16}}></div>
+      <div style={{display:'flex',gap:8,marginBottom:18}}>
+        <div className="skeleton" style={{height:24,width:68}}></div>
+        <div className="skeleton" style={{height:24,width:68}}></div>
+        <div className="skeleton" style={{height:24,width:68}}></div>
+      </div>
+      <div className="skeleton" style={{height:44,width:'100%'}}></div>
+    </div>
+  );
+}
+
 // ─── TRIPS PAGE ───────────────────────────────────────────────────────────────
 
-function TripsPage({ user, onLoginOpen }) {
-  const [filters, setFilters] = useState({ from:'', to:'', date:'' });
+function TripsPage({ user, onLoginOpen, initialFilters }) {
+  const [filters, setFilters] = useState(initialFilters || { from:'', to:'', date:'' });
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selTrip, setSelTrip] = useState(null);
   const [bookTrip, setBookTrip] = useState(null);
   const [toast, setToast] = useState(null);
+
+  // Se arrivo dalla ricerca in home, aggiorna i filtri quando cambia il prefill
+  useEffect(() => {
+    if (initialFilters) setFilters(f => ({ ...f, ...initialFilters }));
+  }, [initialFilters]);
 
   // Carica viaggi reali da Supabase
   useEffect(() => {
@@ -3652,15 +3800,24 @@ function TripsPage({ user, onLoginOpen }) {
         </div>
 
         {loading ? (
-          <div className="empty-state">
-            <div className="spinner" style={{width:40,height:40,margin:'0 auto 16px'}}></div>
-            <div className="empty-title">Caricamento viaggi...</div>
+          <div className="grid-2">
+            {[0,1,2,3].map(i => <SkeletonCard key={i}/>)}
           </div>
         ) : filtered.length===0 ? (
           <div className="empty-state">
-            <span className="empty-icon">🔍</span>
-            <div className="empty-title">Nessun Viaggio Trovato</div>
-            <p className="empty-desc">Non ci sono ancora viaggi disponibili. Torna presto!</p>
+            <span className="empty-icon">🧭</span>
+            <div className="empty-title">Nessun viaggio su questa tratta</div>
+            <p className="empty-desc">
+              {(filters.from || filters.to || filters.date)
+                ? 'Prova a cambiare le città o la data, oppure azzera i filtri per vedere tutti i viaggi.'
+                : 'Non ci sono ancora viaggi pubblicati. Torna presto — o diventa tu il primo autista!'}
+            </p>
+            <div style={{display:'flex',gap:10,justifyContent:'center',marginTop:18,flexWrap:'wrap'}}>
+              {(filters.from || filters.to || filters.date) && (
+                <button className="btn btn-ghost" onClick={()=>setFilters({from:'',to:'',date:''})}>↺ Azzera filtri</button>
+              )}
+              <button className="btn btn-outline" onClick={()=>onLoginOpen('driver-register')}>🚛 Diventa autista</button>
+            </div>
           </div>
         ) : (
           <div className="grid-2">
@@ -3764,8 +3921,8 @@ function UserDashboard({ user, onNavigate }) {
               <div className="stat-card stat-mint"><div className="stat-card-num" style={{color:'var(--mint-dim)'}}>€{spent.toFixed(2)}</div><div className="stat-card-label">Spesa Totale</div></div>
             </div>
             {loadingB ? (
-              <div className="empty-state"><div style={{fontSize:32}}>⏳</div><div className="empty-title">Caricamento...</div></div>
-            ) : myBookings.length===0 ? (
+              <div style={{display:'flex',flexDirection:'column',gap:16}}>{[0,1].map(i=><SkeletonCard key={i}/>)}</div>
+            ) :myBookings.length===0 ? (
               <div className="empty-state">
                 <span className="empty-icon">🎫</span>
                 <div className="empty-title">Nessuna Prenotazione</div>
@@ -4953,6 +5110,10 @@ function App() {
   const [authModal, setAuthModal] = useState(null);
   const [toast, setToast] = useState(null);
   const [sessionLoading, setSessionLoading] = useState(true);
+  const [searchPrefill, setSearchPrefill] = useState(null);
+
+  // Ricerca lanciata dalla home: pre-compila i filtri e apre la pagina viaggi
+  const goSearch = (prefill) => { setSearchPrefill({ ...prefill }); setPage('trips'); };
 
   // Ripristina sessione al ricaricamento pagina
   useEffect(() => {
@@ -5020,8 +5181,8 @@ function App() {
     <div>
       {toast && <Toast {...toast} onClose={()=>setToast(null)}/>}
       <Nav user={user} driver={driver} onLoginOpen={m=>setAuthModal(m)} onLogout={handleLogout} onNavigate={setPage} currentPage={page}/>
-      {page==='home' && <HomePage onNavigate={setPage} onLoginOpen={m=>setAuthModal(m)}/>}
-      {page==='trips' && <TripsPage user={user} onLoginOpen={m=>setAuthModal(m)}/>}
+      {page==='home' && <HomePage onNavigate={setPage} onLoginOpen={m=>setAuthModal(m)} onSearch={goSearch}/>}
+      {page==='trips' && <TripsPage user={user} onLoginOpen={m=>setAuthModal(m)} initialFilters={searchPrefill}/>}
       {page==='user-dash' && user && <UserDashboard user={user} onNavigate={setPage}/>}
       {page==='driver-dash' && driver && <DriverDashboard driver={driver}/>}
       {page==='user-dash' && !user && (
