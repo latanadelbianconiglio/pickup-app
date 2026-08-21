@@ -1395,7 +1395,7 @@ function CityAutocomplete({ value, onChange, placeholder, label, id }) {
     let cancelled = false;
     const t = setTimeout(async () => {
       try {
-        const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lang=it&limit=10&bbox=-31,34,40,72`;
+        const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=10&bbox=-31,34,40,72`;
         const res = await fetch(url);
         if (!res.ok) return;
         const data = await res.json();
