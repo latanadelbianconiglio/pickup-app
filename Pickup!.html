@@ -2334,6 +2334,14 @@ function Nav({ user, driver, onLoginOpen, onLogout, onNavigate, currentPage }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const go = (p) => { onNavigate(p); setMobileOpen(false); };
   const openAuth = (m) => { onLoginOpen(m); setMobileOpen(false); };
+  // Va alla home e scorre alla sezione "Come Funziona" (anche se si è su un'altra pagina)
+  const goHowItWorks = () => {
+    onNavigate('home');
+    setMobileOpen(false);
+    setTimeout(() => {
+      document.getElementById('come-funziona')?.scrollIntoView({ behavior: 'smooth' });
+    }, 60);
+  };
   return (
     <>
     <nav aria-label="Navigazione principale">
@@ -2343,7 +2351,7 @@ function Nav({ user, driver, onLoginOpen, onLogout, onNavigate, currentPage }) {
       </div>
       <div className="nav-links">
         <span className={`nav-link ${currentPage==='trips'?'active':''}`} onClick={()=>onNavigate('trips')} onKeyDown={keyActivate(()=>onNavigate('trips'))} role="button" tabIndex={0}>🗺️ Viaggi</span>
-        <span className="nav-link" onClick={()=>onNavigate('home')} onKeyDown={keyActivate(()=>onNavigate('home'))} role="button" tabIndex={0}>✨ Come Funziona</span>
+        <span className="nav-link" onClick={goHowItWorks} onKeyDown={keyActivate(goHowItWorks)} role="button" tabIndex={0}>✨ Come Funziona</span>
         {driver && <span className={`nav-link ${currentPage==='driver-dash'?'active':''}`} onClick={()=>onNavigate('driver-dash')} onKeyDown={keyActivate(()=>onNavigate('driver-dash'))} role="button" tabIndex={0}>🚛 Dashboard</span>}
         {user && !driver && <span className={`nav-link ${currentPage==='user-dash'?'active':''}`} onClick={()=>onNavigate('user-dash')} onKeyDown={keyActivate(()=>onNavigate('user-dash'))} role="button" tabIndex={0}>🎫 Le Mie Prenotazioni</span>}
       </div>
@@ -2387,7 +2395,7 @@ function Nav({ user, driver, onLoginOpen, onLogout, onNavigate, currentPage }) {
           </div>
         )}
         <div className={`m-link ${currentPage==='trips'?'active':''}`} onClick={()=>go('trips')}>🗺️ Viaggi</div>
-        <div className={`m-link ${currentPage==='home'?'active':''}`} onClick={()=>go('home')}>✨ Come Funziona</div>
+        <div className="m-link" onClick={goHowItWorks}>✨ Come Funziona</div>
         {driver && <div className={`m-link ${currentPage==='driver-dash'?'active':''}`} onClick={()=>go('driver-dash')}>🚛 Dashboard</div>}
         {user && !driver && <div className={`m-link ${currentPage==='user-dash'?'active':''}`} onClick={()=>go('user-dash')}>🎫 Le Mie Prenotazioni</div>}
         {user?.email===ADMIN_EMAIL && <div className="m-link" onClick={()=>go('admin')}>⚙️ Admin</div>}
@@ -3584,7 +3592,7 @@ function HomePage({ onNavigate, onLoginOpen, onSearch }) {
       </div>
 
       {/* HOW */}
-      <div style={{background:'white',borderTop:'1.5px solid var(--border)',borderBottom:'1.5px solid var(--border)'}}>
+      <div id="come-funziona" style={{background:'white',borderTop:'1.5px solid var(--border)',borderBottom:'1.5px solid var(--border)',scrollMarginTop:80}}>
         <div className="section" style={{paddingTop:60,paddingBottom:60}}>
           <div style={{textAlign:'center',marginBottom:40}}>
            
