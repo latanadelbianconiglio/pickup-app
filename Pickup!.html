@@ -971,8 +971,17 @@
 
   .city-input-flag {
     position: absolute;
-    left: 12px;
-    font-size: 18px;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: var(--ocean);
+    background: var(--sky);
+    padding: 3px 6px;
+    border-radius: 6px;
     pointer-events: none;
     z-index: 1;
     line-height: 1;
@@ -1412,7 +1421,7 @@ function CityAutocomplete({ value, onChange, placeholder, label, id }) {
             ? String.fromCodePoint(...[...cc].map(ch => 0x1F1E6 + ch.charCodeAt(0) - 65))
             : '🇪🇺';
           const coords = (f.geometry && f.geometry.coordinates) || [];
-          return { name: p.name, flag, country: p.country || '', lat: coords[1], lng: coords[0] };
+          return { name: p.name, flag, code: cc, country: p.country || '', lat: coords[1], lng: coords[0] };
         }).filter(r => {
           if (!r.name) return false;
           const k = r.name + '|' + r.country;
@@ -1440,7 +1449,7 @@ function CityAutocomplete({ value, onChange, placeholder, label, id }) {
 
   const select = (item) => {
     setQuery(item.name);
-    setSelFlag(item.flag);
+    setSelFlag(item.code || '');
     onChange(item.name);
     setOpen(false);
     setResults([]);
@@ -1503,7 +1512,7 @@ function CityAutocomplete({ value, onChange, placeholder, label, id }) {
                 onMouseDown={() => select(item)}
                 onMouseEnter={() => setHighlighted(i)}
               >
-                <span style={{fontSize:20,lineHeight:1}}>{item.flag}</span>
+                <span style={{fontSize:11,fontWeight:800,letterSpacing:0.5,background:'var(--sky)',color:'var(--ocean)',padding:'3px 6px',borderRadius:6,minWidth:28,textAlign:'center',fontFamily:'DM Mono, monospace'}}>{item.code || '·'}</span>
                 <span style={{fontWeight:700,flex:1}}>{item.name}</span>
                 <span className="city-country">{item.country}</span>
               </div>
@@ -1725,6 +1734,17 @@ const normalize = (s) =>
    .normalize('NFD')
    .replace(/[\u0300-\u036f]/g, '');  // è→e, ü→u, ç→c, ą→a …
 
+// Converte un'emoji bandiera (es. 🇮🇹) nel codice paese a 2 lettere (es. "IT").
+// Serve per mostrare il codice su tutte le piattaforme (Windows non renderizza le bandiere).
+const flagToCode = (flag) => {
+  if (!flag) return '';
+  const cps = [...flag].map(c => c.codePointAt(0));
+  if (cps.length === 2 && cps.every(cp => cp >= 0x1F1E6 && cp <= 0x1F1FF)) {
+    return cps.map(cp => String.fromCharCode(cp - 0x1F1E6 + 65)).join('');
+  }
+  return '';
+};
+
 const searchCities = (q) => {
   if (!q || q.trim().length < 1) return [];
   const nq = normalize(q.trim());
@@ -1739,6 +1759,7 @@ const searchCities = (q) => {
   return [...startsWith, ...contains].slice(0, 10).map(({ city, country }) => ({
     name:    city,
     flag:    country.split(' ')[0],
+    code:    flagToCode(country.split(' ')[0]),
     country: country.replace(/^\S+\s/, ''),
   }));
 };
