@@ -1,5 +1,5 @@
 {
   "rewrites": [
-    { "source": "/(.*)", "destination": "/Pickup!.html" }
+    { "source": "/((?!.*\\.).*)", "destination": "/Pickup!.html" }
   ]
 }

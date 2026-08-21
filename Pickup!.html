@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pick Up! — Sali a Bordo</title>
+<link rel="icon" type="image/png" href="/logo.png">
+<link rel="apple-touch-icon" href="/logo.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
@@ -2346,6 +2348,7 @@ function Nav({ user, driver, onLoginOpen, onLogout, onNavigate, currentPage }) {
     <>
     <nav aria-label="Navigazione principale">
       <div className="nav-logo" onClick={()=>onNavigate('home')} onKeyDown={keyActivate(()=>onNavigate('home'))} role="button" tabIndex={0} aria-label="Pick Up! — vai alla home">
+        <img src="/logo.png" alt="" aria-hidden="true" style={{width:38,height:38,borderRadius:'50%',flexShrink:0,marginRight:2}}/>
         <span>Pick Up</span><span className="excl">!</span>
         <div className="dot"></div>
       </div>
