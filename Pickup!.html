@@ -3361,9 +3361,9 @@ function HomePage({ onNavigate, onLoginOpen }) {
         <div className="truck-wrap">🚛</div>
 
         <div className="hero-content">
-          <div className="hero-badge">🛣️ La nuova mobilità su strada italiana</div>
+          <div className="hero-badge">🛣️ La nuova mobilità su strada, in tutta Europa</div>
           <h1 className="hero-title">Pick Up<span className="pickup-excl">!</span></h1>
-          <div className="hero-sub-title">Sali a Bordo. Esplora il Paese.</div>
+          <div className="hero-sub-title">Sali a Bordo. Esplora l'Europa.</div>
           <p className="hero-desc">
             Prenota un posto su un camion in viaggio verso la tua destinazione.
             Economico, sostenibile, e un'avventura unica ogni volta.
@@ -3455,7 +3455,7 @@ function HomePage({ onNavigate, onLoginOpen }) {
                 {icon:'💰', c:'var(--coral)', t:'Risparmia fino al 70%', d:'I prezzi sono molto più bassi rispetto a treni e aerei per le stesse tratte.'},
                 {icon:'🌿', c:'var(--mint-dim)', t:'Viaggio Sostenibile', d:'Il camion viaggia comunque. Il tuo posto riduce le emissioni pro capite.'},
                 {icon:'🔒', c:'var(--ocean)', t:'Autisti Verificati', d:'Ogni autista è affiliato a un\'azienda certificata e ha un profilo completo.'},
-                {icon:'🗺️', c:'#a07600', t:'Esperienza Unica', d:'Vivi le strade d\'Italia come non le hai mai vissute. Paesaggi indimenticabili.'},
+                {icon:'🗺️', c:'#a07600', t:'Esperienza Unica', d:'Vivi le strade d\'Europa come non le hai mai viste. Paesaggi indimenticabili, oltre ogni confine.'},
               ].map((f,i)=>(
                 <div key={i} style={{display:'flex',gap:16,alignItems:'flex-start',marginBottom:22}}>
                   <div style={{width:48,height:48,borderRadius:14,background:`${f.c}18`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,flexShrink:0}}>{f.icon}</div>
@@ -3467,7 +3467,7 @@ function HomePage({ onNavigate, onLoginOpen }) {
               ))}
             </div>
             <div>
-              <MapView from="Milano" to="Roma" height={380}/>
+              <MapView from="Milano" to="Barcellona" height={380}/>
             </div>
           </div>
         </div>
