@@ -1384,10 +1384,45 @@ function CityAutocomplete({ value, onChange, placeholder, label, id }) {
   const wrapRef  = useRef(null);
   const inputRef = useRef(null);
 
-  // Aggiorna risultati ogni volta che query cambia (senza blocchi inutili)
+  // Ricerca città: locale (istantanea, fallback offline) + Photon/OSM (completa su tutta Europa)
   useEffect(() => {
-    if (!query || query.trim().length < 1) { setResults([]); return; }
-    setResults(searchCities(query));
+    const q = query.trim();
+    if (q.length < 1) { setResults([]); return; }
+    // 1) risultati locali immediati — nessuna attesa, funziona anche offline
+    setResults(searchCities(q));
+    if (q.length < 2) return; // niente chiamata API con un solo carattere
+    // 2) risultati dall'API Photon (OpenStreetMap), limitati all'area europea (bbox)
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      try {
+        const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lang=it&limit=10&bbox=-31,34,40,72`;
+        const res = await fetch(url);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+        const seen = new Set();
+        const mapped = (data.features || []).filter(f => {
+          // solo insediamenti (città, paesi, frazioni…), non vie o punti d'interesse
+          const p = f.properties || {};
+          return p.osm_key === 'place' && ['city','town','village','hamlet','municipality','borough'].includes(p.osm_value);
+        }).map(f => {
+          const p = f.properties || {};
+          const cc = (p.countrycode || '').toUpperCase();
+          const flag = cc.length === 2
+            ? String.fromCodePoint(...[...cc].map(ch => 0x1F1E6 + ch.charCodeAt(0) - 65))
+            : '🇪🇺';
+          const coords = (f.geometry && f.geometry.coordinates) || [];
+          return { name: p.name, flag, country: p.country || '', lat: coords[1], lng: coords[0] };
+        }).filter(r => {
+          if (!r.name) return false;
+          const k = r.name + '|' + r.country;
+          if (seen.has(k)) return false;
+          seen.add(k); return true;
+        }).slice(0, 8);
+        if (mapped.length > 0) setResults(mapped);
+      } catch(e) { /* offline o API non raggiungibile → resta il fallback locale */ }
+    }, 300);
+    return () => { cancelled = true; clearTimeout(t); };
   }, [query]);
 
   // Sync value esterno (es. reset filtri)
@@ -1474,6 +1509,9 @@ function CityAutocomplete({ value, onChange, placeholder, label, id }) {
               </div>
             ))
           )}
+          <div style={{fontSize:10,color:'var(--ink-faint)',textAlign:'right',padding:'4px 10px',borderTop:'1px solid var(--border)'}}>
+            Dati © OpenStreetMap
+          </div>
         </div>
       )}
     </div>
