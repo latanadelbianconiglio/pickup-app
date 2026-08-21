@@ -3522,6 +3522,7 @@ function TripDetailModal({ trip, user, onClose, onBookOpen }) {
 function HomePage({ onNavigate, onLoginOpen, onSearch }) {
   const [homeTrips, setHomeTrips] = useState([]);
   const [hs, setHs] = useState({ from:'', to:'', date:'' });
+  const [openStep, setOpenStep] = useState(null);
   useEffect(() => {
     dbGetTrips().then(data => setHomeTrips(data.slice(0,4)));
   }, []);
@@ -3600,16 +3601,39 @@ function HomePage({ onNavigate, onLoginOpen, onSearch }) {
           </div>
           <div className="grid-3">
             {[
-              { icon:'🔍', color:'#fff0ee', iconBg:'#ffe4df', title:'Cerca il Tuo Viaggio', desc:'Inserisci la destinazione e la data. Trova camion che percorrono già quel tragitto.' },
-              { icon:'🎫', color:'#f0f8ff', iconBg:'#d0eeff', title:'Prenota il Posto', desc:'Scopri le preferenze dell\'autista, scegli i posti e paga in sicurezza in pochi click.' },
-              { icon:'🚛', color:'#f0fff8', iconBg:'#c8f5e0', title:'Sali a Bordo!', desc:'Incontra l\'autista al punto di partenza e goditi un\'esperienza di viaggio indimenticabile.' },
-            ].map((f,i) => (
-              <div key={i} className="feature-card" style={{background:f.color}}>
-                <div className="feature-icon-wrap" style={{background:f.iconBg}}>{f.icon}</div>
-                <div style={{fontFamily:'Righteous',fontSize:18,color:'var(--ink)',marginBottom:10}}>{f.title}</div>
-                <p style={{fontSize:14,color:'var(--ink-soft)',lineHeight:1.7,fontWeight:500}}>{f.desc}</p>
-              </div>
-            ))}
+              { icon:'🔍', color:'#fff0ee', iconBg:'#ffe4df', title:'Cerca il Tuo Viaggio', desc:'Inserisci la destinazione e la data. Trova camion che percorrono già quel tragitto.',
+                details:'Usa la ricerca con partenza, destinazione e data: ti mostriamo solo i camion che passano davvero da lì, con prezzo, orario e posti liberi. Puoi confrontare più viaggi e aprire la mappa del tragitto prima di scegliere.' },
+              { icon:'🎫', color:'#f0f8ff', iconBg:'#d0eeff', title:'Prenota il Posto', desc:'Scopri le preferenze dell\'autista, scegli i posti e paga in sicurezza in pochi click.',
+                details:'Prima di prenotare vedi il profilo dell\'autista, le recensioni e le preferenze a bordo (musica, animali, soste, aria condizionata…). Scegli quanti posti ti servono, lasci un recapito per l\'autista e confermi. Ricevi subito un\'email di conferma con tutti i dettagli.' },
+              { icon:'🚛', color:'#f0fff8', iconBg:'#c8f5e0', title:'Sali a Bordo!', desc:'Incontra l\'autista al punto di partenza e goditi un\'esperienza di viaggio indimenticabile.',
+                details:'L\'autista riceve la tua prenotazione con i tuoi contatti. Vi trovate al punto d\'incontro concordato e potete scrivervi in chat in tempo reale per coordinarvi. A fine viaggio lasci una recensione e aiuti la community a crescere.' },
+            ].map((f,i) => {
+              const open = openStep === i;
+              const toggle = () => setOpenStep(open ? null : i);
+              return (
+                <div key={i} className="feature-card" style={{background:f.color}}>
+                  <button
+                    className="feature-icon-wrap"
+                    onClick={toggle}
+                    aria-expanded={open}
+                    aria-label={`${f.title} — mostra dettagli`}
+                    style={{background:f.iconBg, cursor:'pointer', border:'none', font:'inherit', fontSize:26}}
+                  >{f.icon}</button>
+                  <div style={{fontFamily:'Righteous',fontSize:18,color:'var(--ink)',marginBottom:10}}>{f.title}</div>
+                  <p style={{fontSize:14,color:'var(--ink-soft)',lineHeight:1.7,fontWeight:500}}>{f.desc}</p>
+                  <button onClick={toggle} aria-expanded={open}
+                    style={{background:'none',border:'none',cursor:'pointer',color:'var(--ocean)',fontWeight:800,fontSize:13,padding:0,marginTop:12,display:'inline-flex',alignItems:'center',gap:6}}>
+                    {open ? 'Nascondi' : 'Scopri di più'}
+                    <span style={{transition:'transform 0.2s',transform:open?'rotate(180deg)':'none'}}>▾</span>
+                  </button>
+                  {open && (
+                    <p style={{fontSize:13.5,color:'var(--ink-soft)',lineHeight:1.7,marginTop:12,paddingTop:12,borderTop:'1px dashed var(--border-mid)',animation:'fadeIn 0.25s ease'}}>
+                      {f.details}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
