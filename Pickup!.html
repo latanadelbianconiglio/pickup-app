@@ -1150,6 +1150,39 @@
     .hero-stat { padding:12px 18px; }
     .city-dropdown { max-height: 240px; }
   }
+
+  /* ── ACCESSIBILITÀ ── */
+  /* Focus visibile per chi naviga da tastiera (Tab) */
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible,
+  [role="button"]:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 3px solid var(--ocean);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  /* Elementi cliccabili con tastiera mostrano il cursore corretto */
+  [role="button"] { cursor: pointer; }
+
+  /* Testo solo per screen reader (nascosto visivamente) */
+  .sr-only {
+    position: absolute; width: 1px; height: 1px;
+    padding: 0; margin: -1px; overflow: hidden;
+    clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+  }
+
+  /* Rispetta chi ha ridotto le animazioni (accessibilità vestibolare) */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 </style>
 </head>
 <body>
@@ -1420,7 +1453,7 @@ function CityAutocomplete({ value, onChange, placeholder, label, id }) {
           onKeyDown={handleKey}
           autoComplete="off"
         />
-        {query && <button className="city-clear" onClick={clear}>×</button>}
+        {query && <button className="city-clear" onClick={clear} aria-label="Cancella">×</button>}
       </div>
 
       {open && query.trim().length >= 1 && (
@@ -2167,17 +2200,19 @@ function Nav({ user, driver, onLoginOpen, onLogout, onNavigate, currentPage }) {
   const name = (user||driver)?.name;
   const initials = name ? name.split(' ').map(n=>n[0]).join('') : '';
   const driverPhoto = driver ? getDriverPhoto(driver) : null;
+  // Attiva un elemento cliccabile anche da tastiera (Invio / Spazio)
+  const keyActivate = fn => e => { if (e.key==='Enter' || e.key===' ') { e.preventDefault(); fn(); } };
   return (
-    <nav>
-      <div className="nav-logo" onClick={()=>onNavigate('home')}>
+    <nav aria-label="Navigazione principale">
+      <div className="nav-logo" onClick={()=>onNavigate('home')} onKeyDown={keyActivate(()=>onNavigate('home'))} role="button" tabIndex={0} aria-label="Pick Up! — vai alla home">
         <span>Pick Up</span><span className="excl">!</span>
         <div className="dot"></div>
       </div>
       <div className="nav-links">
-        <span className={`nav-link ${currentPage==='trips'?'active':''}`} onClick={()=>onNavigate('trips')}>🗺️ Viaggi</span>
-        <span className="nav-link" onClick={()=>onNavigate('home')}>✨ Come Funziona</span>
-        {driver && <span className={`nav-link ${currentPage==='driver-dash'?'active':''}`} onClick={()=>onNavigate('driver-dash')}>🚛 Dashboard</span>}
-        {user && !driver && <span className={`nav-link ${currentPage==='user-dash'?'active':''}`} onClick={()=>onNavigate('user-dash')}>🎫 Le Mie Prenotazioni</span>}
+        <span className={`nav-link ${currentPage==='trips'?'active':''}`} onClick={()=>onNavigate('trips')} onKeyDown={keyActivate(()=>onNavigate('trips'))} role="button" tabIndex={0}>🗺️ Viaggi</span>
+        <span className="nav-link" onClick={()=>onNavigate('home')} onKeyDown={keyActivate(()=>onNavigate('home'))} role="button" tabIndex={0}>✨ Come Funziona</span>
+        {driver && <span className={`nav-link ${currentPage==='driver-dash'?'active':''}`} onClick={()=>onNavigate('driver-dash')} onKeyDown={keyActivate(()=>onNavigate('driver-dash'))} role="button" tabIndex={0}>🚛 Dashboard</span>}
+        {user && !driver && <span className={`nav-link ${currentPage==='user-dash'?'active':''}`} onClick={()=>onNavigate('user-dash')} onKeyDown={keyActivate(()=>onNavigate('user-dash'))} role="button" tabIndex={0}>🎫 Le Mie Prenotazioni</span>}
       </div>
       <div className="nav-actions">
         {!isIn ? (
@@ -2383,7 +2418,7 @@ function AuthModal({ mode:initMode, onClose, onLogin, onNavigate }) {
       <div className={`modal ${mode==='driver-register'?'modal-lg':''}`}>
         <div className="modal-header">
           <div className="modal-title">{modalTitle()}</div>
-          <button className="modal-close" onClick={onClose}>×</button>
+          <button className="modal-close" onClick={onClose} aria-label="Chiudi">×</button>
         </div>
         <div className="modal-body">
 
@@ -2689,7 +2724,7 @@ function BookingModal({ trip, user, onClose, onBook }) {
       <div className="modal modal-xl">
         <div className="modal-header">
           <div className="modal-title">🎫 Prenota il Viaggio</div>
-          <button className="modal-close" onClick={onClose}>×</button>
+          <button className="modal-close" onClick={onClose} aria-label="Chiudi">×</button>
         </div>
         <div className="modal-body">
 
@@ -2941,7 +2976,7 @@ function BookingModalFixed({ trip, user, onClose, onBook }) {
       <div className="modal modal-xl">
         <div className="modal-header">
           <div className="modal-title">🎫 Prenota Viaggio</div>
-          <button className="modal-close" onClick={onClose}>×</button>
+          <button className="modal-close" onClick={onClose} aria-label="Chiudi">×</button>
         </div>
         <div className="modal-body">
 
@@ -3230,7 +3265,7 @@ function TripDetailModal({ trip, user, onClose, onBookOpen }) {
       <div className="modal modal-xl">
         <div className="modal-header">
           <div className="modal-title">✈️ Dettaglio Viaggio</div>
-          <button className="modal-close" onClick={onClose}>×</button>
+          <button className="modal-close" onClick={onClose} aria-label="Chiudi">×</button>
         </div>
         <div className="modal-body">
           <div className="detail-hero">
@@ -3327,18 +3362,21 @@ function HomePage({ onNavigate, onLoginOpen }) {
 
         <div className="hero-content">
           <div className="hero-badge">🛣️ La nuova mobilità su strada italiana</div>
-          <div className="hero-title">Pick Up<span className="pickup-excl">!</span></div>
+          <h1 className="hero-title">Pick Up<span className="pickup-excl">!</span></h1>
           <div className="hero-sub-title">Sali a Bordo. Esplora il Paese.</div>
           <p className="hero-desc">
             Prenota un posto su un camion in viaggio verso la tua destinazione.
             Economico, sostenibile, e un'avventura unica ogni volta.
           </p>
           <div className="hero-ctas">
-            <button className="btn btn-white btn-lg" onClick={()=>onNavigate('trips')}>
+            <button className="btn btn-white btn-lg" onClick={()=>onLoginOpen('register')} aria-label="Registrati gratis come passeggero">
+              🎉 Registrati Gratis
+            </button>
+            <button className="btn btn-lg" style={{background:'rgba(255,255,255,0.2)',color:'white',border:'2px solid rgba(255,255,255,0.4)', backdropFilter:'blur(10px)'}} onClick={()=>onNavigate('trips')} aria-label="Cerca i viaggi disponibili">
               🔍 Cerca Viaggi
             </button>
-            <button className="btn btn-lg" style={{background:'rgba(255,255,255,0.2)',color:'white',border:'2px solid rgba(255,255,255,0.4)', backdropFilter:'blur(10px)'}} onClick={()=>onLoginOpen('driver-register')}>
-              🚛 Sei un Autista? Registrati
+            <button className="btn btn-lg" style={{background:'rgba(255,255,255,0.2)',color:'white',border:'2px solid rgba(255,255,255,0.4)', backdropFilter:'blur(10px)'}} onClick={()=>onLoginOpen('driver-register')} aria-label="Registrati come autista">
+              🚛 Sei un Autista?
             </button>
           </div>
           <div className="hero-stats">
@@ -3870,6 +3908,7 @@ function DriverDashboard({ driver }) {
             <button
               onClick={()=>setView('foto')}
               title="Cambia foto"
+              aria-label="Cambia foto profilo"
               style={{
                 position:'absolute',bottom:0,right:0,
                 width:24,height:24,borderRadius:'50%',
@@ -4154,7 +4193,7 @@ function DriverDashboard({ driver }) {
           <div className="modal modal-lg">
             <div className="modal-header">
               <div className="modal-title">🗺️ Crea Nuovo Viaggio</div>
-              <button className="modal-close" onClick={()=>setShowNew(false)}>×</button>
+              <button className="modal-close" onClick={()=>setShowNew(false)} aria-label="Chiudi">×</button>
             </div>
             <div className="modal-body">
               <div className="input-row">
@@ -4267,7 +4306,7 @@ function ChatModal({ booking, currentUser, currentUserType, otherName, onClose }
               <div style={{fontSize:11,color:'var(--ink-soft)'}}>Prenotazione #{booking.id?.slice(-6).toUpperCase()}</div>
             </div>
           </div>
-          <button className="modal-close" onClick={onClose}>×</button>
+          <button className="modal-close" onClick={onClose} aria-label="Chiudi">×</button>
         </div>
 
         {/* Messages */}
@@ -4324,7 +4363,7 @@ function ChatModal({ booking, currentUser, currentUserType, otherName, onClose }
             fontSize:14,fontFamily:'inherit',resize:'none',outline:'none',
             maxHeight:100,overflowY:'auto',lineHeight:1.5}}
           />
-          <button onClick={sendMessage} disabled={sending || !text.trim()}
+          <button onClick={sendMessage} disabled={sending || !text.trim()} aria-label="Invia messaggio"
             style={{width:40,height:40,borderRadius:'50%',border:'none',cursor:'pointer',flexShrink:0,
             background:text.trim()?'linear-gradient(135deg,var(--ocean),#1a5fa8)':'var(--border)',
             color:'white',fontSize:18,display:'flex',alignItems:'center',justifyContent:'center',
@@ -4423,7 +4462,7 @@ function ReviewModal({ booking, driver, user, onClose, onToast }) {
       <div className="modal" style={{maxWidth:480}}>
         <div className="modal-header">
           <div className="modal-title">⭐ Lascia una Recensione</div>
-          <button className="modal-close" onClick={onClose}>×</button>
+          <button className="modal-close" onClick={onClose} aria-label="Chiudi">×</button>
         </div>
         <div className="modal-body">
           <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:24,padding:16,background:'var(--sky)',borderRadius:12}}>
